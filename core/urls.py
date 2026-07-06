@@ -15,8 +15,11 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from analyzer.views import upload_page # <-- Import the view here
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', upload_page, name='home'), # <-- Map the empty path to your portal!
+    path('api/v1/', include('analyzer.urls')), 
 ]
