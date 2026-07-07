@@ -1,6 +1,9 @@
 import hashlib
 import math
 import pefile
+import yara
+import os
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -12,7 +15,7 @@ def upload_page(request):
     return render(request, 'analyzer/upload.html')
 
 
-# 2. Advanced Static Malware Analysis View
+# 2. Advanced Static Malware Analysis & Signature View
 class MalwareUploadView(APIView):
     parser_classes = [MultiPartParser]
 
@@ -54,10 +57,29 @@ class MalwareUploadView(APIView):
             "sha256": sha256_hash,
             "entropy": file_entropy,
             "is_pe": False,
-            "pe_metadata": {}
+            "pe_metadata": {},
+            "yara_matches": []  # Added this field back!
         }
 
-        # Try parsing as a Windows Portable Executable (PE) binary
+        # --- YARA SIGNATURE SCANNING ENGINE ---
+        try:
+            # Locate the absolute path of your rules file
+            rule_path = os.path.join(os.path.dirname(__file__), 'rules', 'malware_signatures.yar')
+            
+            # Verify the rule file exists before trying to compile it
+            if os.path.exists(rule_path):
+                rules = yara.compile(filepath=rule_path)
+                matches = rules.match(data=file_data)
+                
+                # Extract names of all rules matched by this binary file
+                for match in matches:
+                    analysis_results["yara_matches"].append(match.rule)
+            else:
+                analysis_results["yara_matches"].append("Error: Signature rule file missing.")
+        except Exception as e:
+            analysis_results["yara_matches"].append(f"Scan Error: {str(e)}")
+
+        # --- PE PORTABLE EXECUTABLE ENGINE ---
         try:
             pe = pefile.PE(data=file_data)
             analysis_results["is_pe"] = True
