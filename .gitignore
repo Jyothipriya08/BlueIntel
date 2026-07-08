@@ -1,17 +1,16 @@
-# Virtual Environment
-venv/
-.venv/
-env/
-
-# Python caching
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Databases
-db.sqlite3
-
-# OS files
-.DS_Store
-Thumbs.db
+# Local Environment Secret Keys
 .env
+*.env
+
+# Python Virtual Environment
+venv/
+__pycache__/
+*.pyc
+
+# Database
+*.sqlite3
+
+# Frontend Dependencies & Build Output
+node_modules/
+dist/
+.env.local

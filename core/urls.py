@@ -22,4 +22,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', upload_page, name='home'), # <-- Map the empty path to your portal!
     path('api/v1/', include('analyzer.urls')), 
+    path('accounts/', include('allauth.urls')),
 ]
