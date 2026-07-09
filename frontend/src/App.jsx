@@ -275,6 +275,55 @@ export default function App() {
                         <p className="text-[#576575] font-semibold uppercase text-[11px] tracking-wider">Windows PE Binary Binary Structure</p>
                         <p className="font-mono mt-1 font-semibold">{analysisResult.is_pe ? '🟢 Valid Executable Identifier Map' : '⚪ Generic Non-Binary Asset Log'}</p>
                       </div>
+                      {/* --- NEW FEATURE UI: LIVE MALWARE VERDICT ALERT CARD --- */}
+{analysisResult.malware_classification && (
+  <div className={`md:col-span-2 p-5 rounded-2xl border ${
+    analysisResult.malware_classification.verdict === 'MALICIOUS' 
+      ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+      : analysisResult.malware_classification.verdict === 'SUSPICIOUS'
+      ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+  }`}>
+    <div className="flex justify-between items-center mb-2">
+      <span className="font-bold tracking-wide uppercase text-xs">⚠️ Core Engine Threat Verdict</span>
+      <span className="font-mono font-bold text-lg px-3 py-1 rounded-xl bg-black/40">
+        {analysisResult.malware_classification.verdict} ({analysisResult.malware_classification.score}/100)
+      </span>
+    </div>
+    <ul className="text-xs list-disc list-inside space-y-1 text-[#94a3b8] mt-2">
+      {analysisResult.malware_classification.indicators.map((ind, i) => (
+        <li key={i} className="font-sans">{ind}</li>
+      ))}
+      {analysisResult.malware_classification.indicators.length === 0 && (
+        <li className="font-sans text-emerald-400">File exhibits baseline behavioral metrics. No anomalies flagged.</li>
+      )}
+    </ul>
+  </div>
+)}
+
+{/* --- NEW FEATURE UI: AUTOMATED IOC TRACKING ARRAYS --- */}
+{analysisResult.iocs && (
+  <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-[#25a5ff]/10 pt-4">
+    <div className="bg-[#020212]/40 p-4 rounded-xl border border-[#25a5ff]/5">
+      <p className="text-[#576575] font-semibold uppercase text-[11px] tracking-wider mb-2">Network IPs Identified</p>
+      {analysisResult.iocs.ips.length > 0 ? (
+        <div className="space-y-1">{analysisResult.iocs.ips.map((ip, i) => <p key={i} className="font-mono text-xs text-orange-400 bg-orange-500/5 px-2 py-1 rounded border border-orange-500/10">{ip}</p>)}</div>
+      ) : <p className="text-xs text-[#576575] italic">None extracted</p>}
+    </div>
+    <div className="bg-[#020212]/40 p-4 rounded-xl border border-[#25a5ff]/5">
+      <p className="text-[#576575] font-semibold uppercase text-[11px] tracking-wider mb-2">C2 Domains Logged</p>
+      {analysisResult.iocs.domains.length > 0 ? (
+        <div className="space-y-1">{analysisResult.iocs.domains.map((dom, i) => <p key={i} className="font-mono text-xs text-orange-400 bg-orange-500/5 px-2 py-1 rounded border border-orange-500/10 break-all">{dom}</p>)}</div>
+      ) : <p className="text-xs text-[#576575] italic">None extracted</p>}
+    </div>
+    <div className="bg-[#020212]/40 p-4 rounded-xl border border-[#25a5ff]/5">
+      <p className="text-[#576575] font-semibold uppercase text-[11px] tracking-wider mb-2">Registry Persistences</p>
+      {analysisResult.iocs.registry_keys.length > 0 ? (
+        <div className="space-y-1">{analysisResult.iocs.registry_keys.map((reg, i) => <p key={i} className="font-mono text-[10px] text-orange-400 bg-orange-500/5 px-2 py-1 rounded border border-orange-500/10 break-all">{reg}</p>)}</div>
+      ) : <p className="text-xs text-[#576575] italic">None extracted</p>}
+    </div>
+  </div>
+)}
                     </div>
 
                     {/* YARA SIGNATURE TRIGGER MATCHES LIST */}
