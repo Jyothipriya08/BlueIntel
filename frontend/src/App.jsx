@@ -27,7 +27,7 @@ export default function App() {
   const [authAnimationDirection, setAuthAnimationDirection] = useState('forward');
   const [workspaceAnimationDirection, setWorkspaceAnimationDirection] = useState('right');
   const [transitionState, setTransitionState] = useState('auth');
-
+  
   // --- ANALYSIS STATE MACHINE ---
   const [uploading, setUploading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
@@ -68,6 +68,24 @@ export default function App() {
     prevLoggedInRef.current = isLoggedIn;
   }, [isLoggedIn]);
 
+  // Automated mounting effect to stream historical tables from Django DB
+  useEffect(() => {
+    const fetchHistoryLedger = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/v1/history-ledger/');
+        if (response.ok) {
+          const historyData = await response.json();
+          setScanHistory(historyData);
+        }
+      } catch (err) {
+        console.error("Database connection failure streaming history arrays.");
+      }
+    };
+    if (isLoggedIn) {
+      fetchHistoryLedger();
+    }
+  }, [isLoggedIn, analysisResult]);
+
   const triggerCopy = (text, key) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
@@ -85,6 +103,12 @@ export default function App() {
     const nextIndex = tabOrder.indexOf(nextTab);
     setWorkspaceAnimationDirection(nextIndex >= currentIndex ? 'right' : 'left');
     setActiveTab(nextTab);
+  };
+
+  const handleSignup = (e) => {
+    e.preventDefault();
+    // Simulate signup completion and shift back to login or dashboard
+    setIsLoggedIn(true);
   };
 
   const handleFileChange = async (e) => {
@@ -108,15 +132,20 @@ export default function App() {
       const data = await response.json();
       setAnalysisResult(data); 
 
-      // Update historical monitoring table matrix dynamically
       setScanHistory(prev => [
-        { name: data.file_name, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), hash: `${data.sha256.slice(0,4)}...${data.sha256.slice(-4)}`, verdict: data.malware_classification?.verdict, score: data.malware_classification?.score },
+        { 
+          name: data.file_name, 
+          time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), 
+          hash: data.sha256 ? `${data.sha256.slice(0,4)}...${data.sha256.slice(-4)}` : 'N/A', 
+          verdict: data.malware_classification?.verdict || 'UNKNOWN', 
+          score: data.malware_classification?.score || 0 
+        },
         ...prev
       ]);
 
       setChatLog(prev => [...prev, { 
         role: 'assistant', 
-        text: `⚠️ Payload [${data.file_name}] ingested into memory buffer. Heuristic threat index calculated at ${data.malware_classification?.score}/100. Pinging Anthropic API framework...` 
+        text: `⚠️ Payload [${data.file_name}] ingested into memory buffer. Heuristic threat index calculated at ${data.malware_classification?.score || 0}/100. Pinging Anthropic API framework...` 
       }]);
 
       const aiResponse = await fetch('http://127.0.0.1:8000/api/v1/ai-report/', {
@@ -129,10 +158,13 @@ export default function App() {
         const aiData = await aiResponse.json();
         setAnalysisResult(prev => ({ ...prev, ai_generated_report: aiData.report }));
         setChatLog(prev => [...prev, { role: 'assistant', text: "🤖 Comprehensive AI report received from Claude 3.5 Sonnet. Playbook mapping ready." }]);
+      } else {
+        setAnalysisResult(prev => ({ ...prev, ai_generated_report: "❌ AI Compilation Failed: Check server log keys or usage credits." }));
       }
     } catch (error) {
       console.error(error);
       alert('Error connecting to Django security console matrix.');
+      setAnalysisResult(prev => ({ ...prev, ai_generated_report: "❌ Connection pipeline error." }));
     } finally {
       setUploading(false);
     }
@@ -167,6 +199,8 @@ export default function App() {
   const renderAuthScreen = () => (
     <div className="min-h-screen w-full bg-[#01010a] flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-[#25a5ff]/10 to-purple-500/5 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[500px] h-[500px] bg-[#25a5ff]/5 rounded-full blur-[140px] pointer-events-none" />
+
       <div className="backdrop-blur-xl bg-[#0b0f19]/70 p-12 rounded-[2rem] border border-[#25a5ff]/20 w-full max-w-lg shadow-[0_0_80px_rgba(37,165,255,0.08)] z-10 transition-all">
         <div className="text-center mb-8">
           <div className="inline-block p-4 rounded-2xl bg-[#25a5ff]/5 border border-[#25a5ff]/10 mb-4 animate-pulse">
@@ -208,7 +242,16 @@ export default function App() {
                   <Radio size={16} className="text-[#25a5ff] animate-pulse" /> Identity Provider Federated SSO
                 </button>
               </form>
-            ) : null}
+            ) : (
+              <form onSubmit={handleSignup} className="space-y-4">
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#576575]"><Mail size={16} /></span>
+                  <input type="email" className="w-full bg-[#04060d]/90 border border-[#25a5ff]/15 rounded-xl pl-12 pr-4 py-4 text-white text-xs font-mono focus:border-[#25a5ff] outline-none shadow-inner" placeholder="Enter corporate email address" required />
+                </div>
+                <button type="submit" className="w-full bg-gradient-to-r from-[#1c212c] to-[#252f3f] border border-[#25a5ff]/30 text-white font-bold py-4 rounded-xl text-xs uppercase tracking-widest transition-all">Sign up</button>
+                <p className="text-center text-xs text-[#576575] pt-4 font-mono">Already authorized? <button type="button" onClick={() => switchAuthPage('login')} className="text-[#25a5ff] font-bold">Log in</button></p>
+              </form>
+            )}
           </div>
         </div>
       </div>
@@ -217,8 +260,6 @@ export default function App() {
 
   const renderDashboardScreen = () => (
     <div className="min-h-screen w-full bg-[#02020a] flex text-white font-sans relative overflow-hidden">
-      
-      {/* SIDEBAR ASIDE CONTROL */}
       <aside className="w-80 bg-gradient-to-b from-[#090d16] to-[#03050a] border-r border-[#25a5ff]/15 flex flex-col justify-between p-6 z-10 relative">
         <div className="absolute inset-0 bg-[#25a5ff]/1 mix-blend-color-dodge pointer-events-none" />
         <div>
@@ -266,22 +307,21 @@ export default function App() {
 
         <div className="border-t border-[#25a5ff]/10 pt-5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#25a5ff]/20 to-purple-500/10 text-[#25a5ff] flex items-center justify-center text-xs font-black border border-[#25a5ff]/30 shadow-md">OP</div>
-            <div className="flex flex-col">
-              <p className="text-xs font-bold text-white tracking-wide">Operator-Jyothi</p>
-              <p className="text-[9px] text-[#25a5ff] font-mono font-bold uppercase tracking-widest">SecOps Commander</p>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#25a5ff]/20 to-purple-500/10 text-[#25a5ff] flex items-center justify-center text-xs font-black border border-[#25a5ff]/30 shadow-md">L3</div>
+            <div>
+              <p className="text-xs font-bold text-white">Operator-Jyothi</p>
+              <p className="text-[9px] text-[#25a5ff] font-mono font-bold uppercase tracking-widest">SecOps Lead</p>
             </div>
           </div>
           <button onClick={() => setIsLoggedIn(false)} className="text-[#425265] hover:text-red-400 p-2.5 rounded-xl border border-transparent hover:border-red-500/10 hover:bg-red-500/5 transition-all"><LogOut size={16} /></button>
         </div>
       </aside>
 
-      {/* CORE FRAME LAYOUT STAGE DISPLAY CONTAINER */}
       <main className="flex-1 p-8 overflow-y-auto z-10 relative">
         <header className="mb-8 flex justify-between items-center border-b border-[#25a5ff]/15 pb-6">
           <div>
             <div className="text-[9px] font-mono font-black text-[#25a5ff] tracking-widest uppercase mb-1">System Terminal Protocol Matrix</div>
-            <h2 className="text-3xl font-black tracking-widest text-white uppercase">{activeTab.replace('_', ' ')}</h2>
+            <h2 className="text-2xl font-black tracking-widest text-white uppercase">{activeTab.replace('_', ' ')} Module</h2>
           </div>
           <div className="bg-[#0b101d] border border-[#25a5ff]/20 text-[10px] font-mono font-bold px-4 py-2.5 rounded-xl text-[#25a5ff] tracking-widest flex items-center gap-2 shadow-inner">
             <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399] animate-pulse" /> INFRASTRUCTURE LAYER: ONLINE
@@ -289,13 +329,9 @@ export default function App() {
         </header>
 
         <div className="relative overflow-hidden min-h-[calc(100vh-200px)]">
-          
-          {/* TAB 1: TRIAGE DASHBOARD MASTER CONSOLE GRID */}
           {activeTab === 'dashboard' && (
             <div key={activeTab} className={workspaceAnimationDirection === 'right' ? 'workspace-panel-enter' : 'workspace-panel-enter-left'}>
               <div className="space-y-8">
-                
-                {/* ADVANCED GLOWING NEON DROPZONE ARTIFACT */}
                 <label className="border-2 border-dashed border-[#25a5ff]/20 bg-gradient-to-b from-[#090e18]/60 to-[#04060b]/90 hover:border-[#25a5ff]/60 hover:shadow-[0_0_40px_rgba(37,165,255,0.03)] transition-all rounded-3xl p-16 text-center flex flex-col items-center justify-center cursor-pointer group relative overflow-hidden block">
                   <div className="absolute inset-0 bg-gradient-to-r from-[#25a5ff]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                   <input type="file" onChange={handleFileChange} className="hidden" disabled={uploading} />
@@ -328,7 +364,6 @@ export default function App() {
                     </div>
                   </div>
                 ) : (
-                  /* PREMIUM MONITORING MATRIX METRIC BLOCKS */
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {[
@@ -349,7 +384,6 @@ export default function App() {
                       })}
                     </div>
 
-                    {/* HISTORICAL THREAT LEDGER MATRIX TABLE */}
                     <div className="bg-[#080d16]/60 border border-[#25a5ff]/15 rounded-2xl p-6 shadow-2xl">
                       <h3 className="text-xs font-mono font-black tracking-widest text-[#25a5ff] uppercase mb-4 flex items-center gap-2"><History size={14}/> Operational Threat Log History</h3>
                       <div className="overflow-x-auto">
@@ -387,13 +421,10 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB 2: ADVANCED STATIC PARSER ANALYSIS ENDPOINT */}
           {activeTab === 'static_parser' && (
             <div key={activeTab} className={workspaceAnimationDirection === 'right' ? 'workspace-panel-enter' : 'workspace-panel-enter-left'}>
               {analysisResult ? (
                 <div className="space-y-6">
-                  
-                  {/* HEURISTIC HAZARD VERDICT CALLOUT PANEL */}
                   {analysisResult.malware_classification && (
                     <div className={`p-6 rounded-2xl border ${
                       analysisResult.malware_classification.verdict === 'MALICIOUS' ? 'bg-red-500/5 border-red-500/30 text-red-400' :
@@ -416,8 +447,6 @@ export default function App() {
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-xs">
-                    
-                    {/* CRYPTOGRAPHIC FINGERPRINT HUD CARD */}
                     <div className="bg-[#080d16]/80 border border-[#25a5ff]/15 p-6 rounded-2xl space-y-4 shadow-xl">
                       <h3 className="text-xs font-bold uppercase tracking-widest text-[#25a5ff] flex items-center gap-2 border-b border-[#25a5ff]/10 pb-3"><FileCode size={14}/> File Hashes Registry</h3>
                       <div className="space-y-3">
@@ -439,7 +468,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* SHANNON ENTROPY COMPILATION HUDS */}
                     <div className="bg-[#080d16]/80 border border-[#25a5ff]/15 p-6 rounded-2xl space-y-4 shadow-xl flex flex-col justify-between">
                       <div>
                         <h3 className="text-xs font-bold uppercase tracking-widest text-[#25a5ff] flex items-center gap-2 border-b border-[#25a5ff]/10 pb-3"><Zap size={14}/> Entropy Metric Mapping</h3>
@@ -457,7 +485,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* ADVANCED IMPORT ADDRESS TABLE (IAT) DETECTOR MATRIX */}
                   <div className="bg-[#080d16]/80 border border-[#25a5ff]/15 rounded-2xl p-6 shadow-2xl">
                     <h3 className="text-xs font-mono font-black tracking-widest text-[#25a5ff] uppercase mb-4 flex items-center gap-2 border-b border-[#25a5ff]/10 pb-3"><Network size={14}/> Import Address Table (IAT) Core API Hook Dissector</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs font-mono">
@@ -488,7 +515,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* EXPANDED SECTION HEADERS GRID FOOTPRINT */}
                   {analysisResult.pe_metadata?.sections && (
                     <div className="bg-[#080d16]/80 border border-[#25a5ff]/15 rounded-2xl p-6 shadow-xl">
                       <p className="text-xs font-mono font-black uppercase tracking-widest text-[#25a5ff] mb-4 flex items-center gap-2"><Binary size={14}/> Dissected PE Header Structure Mappings</p>
@@ -510,15 +536,12 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB 3: DYNAMIC ANALYZER DETONATION INTERFACE */}
           {activeTab === 'dynamic_sandbox' && (
             <div key={activeTab} className={workspaceAnimationDirection === 'right' ? 'workspace-panel-enter' : 'workspace-panel-enter-left'}>
               {analysisResult ? (
                 <div className="bg-[#080d16]/80 border border-[#25a5ff]/15 rounded-2xl p-6 space-y-6 shadow-2xl">
                   <div className="flex justify-between items-center border-b border-[#25a5ff]/10 pb-4">
                     <h3 className="text-sm font-mono font-black tracking-widest text-orange-400 flex items-center gap-2"><ShieldAlert size={18}/> Detonation Sandbox Matrix Node</h3>
-                    
-                    {/* INTERACTIVE INNER DETONATION SUB-TABS */}
                     <div className="flex bg-black/40 p-1 rounded-xl border border-white/5 font-mono text-[10px] font-bold uppercase tracking-wider">
                       <button onClick={() => setSandboxTab('tree')} className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${sandboxTab === 'tree' ? 'bg-[#25a5ff] text-black font-black' : 'text-[#576575] hover:text-white'}`}>Process Tree</button>
                       <button onClick={() => setSandboxTab('mutations')} className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${sandboxTab === 'mutations' ? 'bg-[#25a5ff] text-black font-black' : 'text-[#576575] hover:text-white'}`}>System Mutations</button>
@@ -526,13 +549,11 @@ export default function App() {
                   </div>
 
                   {sandboxTab === 'tree' ? (
-                    /* --- WOW FEATURE: INTERACTIVE DETONATION PROCESS TREE VISUALIZER --- */
                     <div className="space-y-4">
                       <p className="text-xs text-[#94a3b8] font-sans">Dissecting real-time parent-child binary task spawning pipelines executed inside the quarantined runtime cage:</p>
                       <div className="p-8 bg-black/40 border border-white/5 rounded-2xl font-mono text-xs space-y-6 relative overflow-hidden">
                         <div className="absolute left-12 top-12 bottom-12 border-l border-dashed border-[#25a5ff]/20 pointer-events-none" />
                         
-                        {/* Parent Ingest Node */}
                         <div className="flex items-center space-x-3 relative z-10">
                           <div className="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/30 flex items-center justify-center font-bold font-mono">1</div>
                           <div className="bg-[#121927] border border-orange-500/30 p-3 rounded-xl min-w-[240px] shadow-md">
@@ -541,7 +562,6 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Child Spawn 01 */}
                         <div className="flex items-center space-x-3 ml-12 relative z-10">
                           <div className="w-6 h-0.5 bg-[#25a5ff]/30 -ml-6" />
                           <div className="w-8 h-8 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30 flex items-center justify-center font-bold font-mono">2</div>
@@ -551,7 +571,6 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Grandchild Spawn 02 */}
                         <div className="flex items-center space-x-3 ml-24 relative z-10">
                           <div className="w-6 h-0.5 bg-[#25a5ff]/30 -ml-6" />
                           <div className="w-8 h-8 rounded-xl bg-red-500/20 text-red-400 border border-red-500/40 flex items-center justify-center font-bold font-mono animate-pulse">3</div>
@@ -563,7 +582,6 @@ export default function App() {
                       </div>
                     </div>
                   ) : (
-                    /* --- WOW FEATURE: FILTERED SYSTEM MUTATIONS DATA HUD --- */
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
                       <div className="bg-black/30 border border-[#25a5ff]/10 p-5 rounded-xl space-y-2">
                         <p className="text-red-400 font-bold uppercase tracking-wider text-[10px] border-b border-red-500/10 pb-1.5">File System Mutations Log</p>
@@ -584,7 +602,6 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB 4: IOC TRACKER DATA HUD LAYOUT */}
           {activeTab === 'ioc_tracker' && (
             <div key={activeTab} className={workspaceAnimationDirection === 'right' ? 'workspace-panel-enter' : 'workspace-panel-enter-left'}>
               {analysisResult?.iocs ? (
@@ -625,12 +642,9 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB 5: AI REPORT GENERATION & INTERACTIVE COPILOT CHAT SYSTEM */}
           {activeTab === 'ai_reports' && (
             <div key={activeTab} className={workspaceAnimationDirection === 'right' ? 'workspace-panel-enter' : 'workspace-panel-enter-left'}>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                
-                {/* ADVANCED WHITE-SPACE PRE LINE EXECUTIVE REPORT BOX */}
                 <div className="bg-[#080d16]/80 border border-[#25a5ff]/15 p-6 rounded-3xl space-y-4 shadow-2xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 font-mono text-[9px] text-[#576575] font-bold uppercase tracking-widest pointer-events-none">MODEL: CLAUDE 3.5 SONNET</div>
                   <h3 className="text-sm font-mono font-black uppercase tracking-widest text-[#25a5ff] flex items-center gap-2 border-b border-[#25a5ff]/10 pb-3"><Zap size={16}/> Synthetic Executive Security Brief</h3>
@@ -648,7 +662,6 @@ export default function App() {
                   ) : <p className="text-xs font-mono text-[#576575] italic p-4">Please ingest a threat file structure into the uploader matrix first.</p>}
                 </div>
 
-                {/* PREMIUM CHAT CONSOLE HUD INTERFACE */}
                 <div className="bg-[#04070e] border border-[#25a5ff]/15 rounded-3xl flex flex-col h-[520px] overflow-hidden shadow-2xl relative">
                   <div className="absolute inset-0 bg-[#25a5ff]/0.5 mix-blend-overlay pointer-events-none" />
                   <div className="bg-[#090d16] px-5 py-4 border-b border-[#25a5ff]/15 flex items-center justify-between text-xs font-mono font-black tracking-widest uppercase text-white shadow-md relative z-10">
@@ -668,7 +681,7 @@ export default function App() {
                     ))}
                   </div>
                   <form onSubmit={submitAgenticQuery} className="p-4 bg-[#090d16] border-t border-[#25a5ff]/15 flex gap-3 relative z-10">
-                    <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} className="flex-1 bg-[#020307] border border-[#25a5ff]/20 rounded-xl px-4 py-3.5 text-xs text-white font-mono outline-none focus:border-[#25a5ff] shadow-inner" placeholder="Ask about MITRE mappings, ir remediation playbooks, or signatures..."/>
+                    <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} className="flex-1 bg-[#020307] border border-[#25a5ff]/20 rounded-xl px-4 py-3.5 text-xs text-white font-mono outline-none focus:border-[#25a5ff] shadow-inner" placeholder="Ask about MITRE mappings, ioc footprints, or rules..."/>
                     <button type="submit" className="bg-[#131926] border border-[#25a5ff]/30 text-[#25a5ff] hover:bg-[#25a5ff] hover:text-black px-5 rounded-xl text-xs font-mono font-black uppercase tracking-widest cursor-pointer transition-all shadow-md">Transmit</button>
                   </form>
                 </div>
@@ -676,7 +689,6 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB 6: PREMIUM RECHARTS THREAT LANDSCAPE CHART VIEW */}
           {activeTab === 'threat_graph' && (
             <div key={activeTab} className={workspaceAnimationDirection === 'right' ? 'workspace-panel-enter' : 'workspace-panel-enter-left'}>
               <div className="bg-[#080d16]/80 border border-[#25a5ff]/15 rounded-3xl p-6 space-y-4 shadow-2xl relative overflow-hidden">
@@ -723,7 +735,7 @@ export default function App() {
         }
         @keyframes authCardSlideReverse {
           0% { opacity: 0; transform: translateY(-14px); }
-          100% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 1; transform: translateX(0); }
         }
         @keyframes workspacePanelSlide {
           0% { opacity: 0; transform: translateX(20px); filter: blur(4px); }
@@ -738,7 +750,6 @@ export default function App() {
         .workspace-panel-enter { animation: workspacePanelSlide 550ms cubic-bezier(0.16, 1, 0.3, 1) both; }
         .workspace-panel-enter-left { animation: workspacePanelSlideLeft 550ms cubic-bezier(0.16, 1, 0.3, 1) both; }
         
-        /* Premium custom scrollbar configuration tracks */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(37,165,255,0.2); border-radius: 10px; }

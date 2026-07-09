@@ -17,7 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from analyzer.views import upload_page
-from analyzer.views import MalwareUploadView, AIThreatReportView# <-- Import the view here
+from analyzer.views import MalwareUploadView, AIThreatReportView
+from analyzer.views import MalwareUploadView, AIThreatReportView, ScanHistoryLedgerView # <-- Update import here# <-- Import the view here
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,4 +27,5 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('api/v1/upload/', MalwareUploadView.as_view(), name='file_upload_analysis'),
     path('api/v1/ai-report/', AIThreatReportView.as_view(), name='ai_threat_report'),
+    path('api/v1/history-ledger/', ScanHistoryLedgerView.as_view(), name='history_ledger'), # <-- Add this line
 ]
