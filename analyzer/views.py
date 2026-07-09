@@ -4,11 +4,14 @@ import os
 import re
 import pefile
 import yara
+import anthropic
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 # --- ADD THESE IMPORTS FOR CSRF BYPASS ---
 from django.views.decorators.csrf import csrf_exempt
@@ -159,3 +162,76 @@ class MalwareUploadView(APIView):
         }
 
         return Response(analysis_results, status=status.HTTP_200_OK)
+    
+@method_decorator(csrf_exempt, name='dispatch')
+class AIThreatReportView(APIView):
+    def post(self, request, format=None):
+        # Read the telemetry metrics payload passed from the frontend
+        analysis_data = request.data.get("analysis_results")
+        user_query = request.data.get("query", None) # Used if the operator is using the interactive chat node
+
+        if not analysis_data:
+            return Response({"error": "No analysis dataset provided for AI synthesis."}, status=status.HTTP_400_BAD_REQUEST)
+
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            return Response({"error": "Anthropic API Key is missing from backend configuration settings."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        try:
+            # Initialize the official Claude client infrastructure node
+            client = anthropic.Anthropic(api_key=api_key)
+
+            # Construct the architectural context matrix prompt
+            system_prompt = (
+                "You are the BlueIntel Autonomous SecOps AI Copilot, a tier-3 elite malware analysis agent. "
+                "Your objective is to analyze raw binary static/dynamic metadata structures and provide clear, authoritative, "
+                "and highly advanced threat analysis. Avoid generic commentary; be deeply technical yet highly actionable."
+            )
+
+            if user_query:
+                # Contextual Interactive Chat Mode
+                prompt = (
+                    f"Here is the static analysis telemetry dataset for the file '{analysis_data.get('file_name')}':\n"
+                    f"- SHA-256: {analysis_data.get('sha256')}\n"
+                    f"- Entropy: {analysis_data.get('entropy')}\n"
+                    f"- YARA Matches: {analysis_data.get('yara_matches')}\n"
+                    f"- Extracted IOCs: {analysis_data.get('iocs')}\n"
+                    f"- Verdict: {analysis_data.get('malware_classification', {}).get('verdict')} "
+                    f"({analysis_data.get('malware_classification', {}).get('score')}/100)\n\n"
+                    f"The SecOps Operator is asking the following specific question: '{user_query}'\n"
+                    f"Provide an explicit response leveraging the telemetry information."
+                )
+            else:
+                # Master Executive Report Generation Mode
+                prompt = (
+                    f"Perform a comprehensive threat assessment and generate an executive report using this telemetry metadata:\n"
+                    f"File Name: {analysis_data.get('file_name')}\n"
+                    f"Size: {analysis_data.get('file_size_bytes')} Bytes\n"
+                    f"Entropy: {analysis_data.get('entropy')}\n"
+                    f"Is Windows PE: {analysis_data.get('is_pe')}\n"
+                    f"YARA Hits: {analysis_data.get('yara_matches')}\n"
+                    f"Extracted Host/Network IOCs: {analysis_data.get('iocs')}\n"
+                    f"Heuristic Threat Score: {analysis_data.get('malware_classification', {}).get('score')}/100\n\n"
+                    f"Format your output exactly with these clear Markdown headers:\n"
+                    f"### 🛡️ Executive Summary & Threat Classification\n(Provide a technical breakdown of what this file is doing based on the entropy and YARA highlights.)\n\n"
+                    f"### 🥷 MITRE ATT&CK Mapping Matrix\n(Map indicators like registry persistence or network callouts to explicit MITRE ATT&CK tactics, such as T1547.001 or T1071.001.)\n\n"
+                    f"### ⚡ Actionable Incident Response Playbook\n(Provide exact step-by-step technical mitigation commands or actions to neutralize this specific threat cluster.)"
+                )
+
+            # Dispatch synchronous streaming block request to Claude 3.5 Sonnet
+            message = client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=1500,
+                temperature=0.1,
+                system=system_prompt,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+
+            # Extract content text blocks cleanly
+            ai_response_text = message.content[0].text
+            return Response({"report": ai_response_text}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": f"Claude API Transaction Failure: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

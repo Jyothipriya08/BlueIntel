@@ -16,11 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from analyzer.views import upload_page # <-- Import the view here
+from analyzer.views import upload_page
+from analyzer.views import MalwareUploadView, AIThreatReportView# <-- Import the view here
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', upload_page, name='home'), # <-- Map the empty path to your portal!
     path('api/v1/', include('analyzer.urls')), 
     path('accounts/', include('allauth.urls')),
+    path('api/v1/upload/', MalwareUploadView.as_view(), name='file_upload_analysis'),
+    path('api/v1/ai-report/', AIThreatReportView.as_view(), name='ai_threat_report'),
 ]
