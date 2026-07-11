@@ -12,6 +12,19 @@ class ThreatAnalysisLog(models.Model):
     is_pe = models.BooleanField(default=False)
     timestamp = models.DateTimeField(auto_now_add=True)
     
+    # Processing state and duration
+    status = models.CharField(max_length=50, default='COMPLETED')  # PENDING, PROCESSING, COMPLETED, FAILED
+    status_detail = models.CharField(max_length=255, default='Completed successfully.')  # E.g. 'Running YARA Rules'
+    scan_duration_seconds = models.FloatField(default=0.0)
+    
+    # Extra static binary headers
+    compiler_info = models.CharField(max_length=255, blank=True, null=True)
+    digital_signature = models.CharField(max_length=255, blank=True, null=True)
+    embedded_strings = models.JSONField(default=list, blank=True)
+    suspicious_apis = models.JSONField(default=list, blank=True)
+    mitre_attack = models.JSONField(default=list, blank=True)
+    persistence_techniques = models.JSONField(default=list, blank=True)
+    
     # Complex Telemetry Payload Fields (Stored securely as structural JSON)
     pe_metadata = models.JSONField(default=dict, blank=True)
     yara_matches = models.JSONField(default=list, blank=True)
@@ -29,6 +42,22 @@ class ThreatAnalysisLog(models.Model):
 
     def __str__(self):
         return f"{self.file_name} - {self.malware_classification.get('verdict', 'UNKNOWN')}"
+
+
+class ThreatIntelligenceFeed(models.Model):
+    indicator_value = models.CharField(max_length=255, unique=True)  # Hash, IP, or Domain
+    indicator_type = models.CharField(max_length=50)  # HASH, IP, DOMAIN
+    threat_actor = models.CharField(max_length=100, default='UNKNOWN')
+    malware_family = models.CharField(max_length=100, default='UNKNOWN')
+    severity = models.CharField(max_length=20, default='HIGH')  # CRITICAL, HIGH, MEDIUM, LOW
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.indicator_type}: {self.indicator_value} ({self.malware_family})"
 
 
 # --- NEW ENTERPRISE TELEMETRY AUDIT MODELS ---

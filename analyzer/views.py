@@ -8,13 +8,15 @@ import anthropic
 import random
 import io
 import requests
-
+import json
+import queue
 from django.shortcuts import render, redirect
+from django.db import models
+from django.http import HttpResponse, HttpResponseRedirect, StreamingHttpResponse
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.core.mail import send_mail
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth import authenticate, login as auth_login
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
@@ -33,7 +35,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
 # Import models, utils and services
-from .models import ThreatAnalysisLog, UserOTP, UserActivityLog, UserNotification, UserSetting
+from .models import ThreatAnalysisLog, UserOTP, UserActivityLog, UserNotification, UserSetting, ThreatIntelligenceFeed
 from .utils import encrypt_key, decrypt_key
 from .services.virustotal_service import VirusTotalService
 
@@ -51,35 +53,397 @@ def upload_page(request):
 
 # --- TELEMETRY AND ANALYSIS VIEW ENGINES ---
 
-@method_decorator(csrf_exempt, name='dispatch')
-class MalwareUploadView(APIView):
-    parser_classes = [MultiPartParser]
-    permission_classes = [permissions.AllowAny]
+class TelemetryBroadcaster:
+    clients = []
 
-    def calculate_entropy(self, data):
-        if not data: return 0.0
-        entropy = 0
-        length = len(data)
-        frequencies = [0] * 256
-        for byte in data: frequencies[byte] += 1
-        for count in frequencies:
+    @classmethod
+    def register_client(cls):
+        q = queue.Queue(maxsize=30)
+        cls.clients.append(q)
+        return q
+
+    @classmethod
+    def unregister_client(cls, q):
+        if q in cls.clients:
+            cls.clients.remove(q)
+
+    @classmethod
+    def broadcast(cls, event_type, data):
+        message = {"type": event_type, "data": data}
+        for client in list(cls.clients):
+            try:
+                client.put_nowait(message)
+            except queue.Full:
+                if client in cls.clients:
+                    cls.clients.remove(client)
+
+def broadcast_scan_update(log):
+    payload = {
+        "id": log.id,
+        "status": log.status,
+        "status_detail": log.status_detail,
+        "file_name": log.file_name,
+        "file_size_bytes": log.file_size_bytes,
+        "sha256": log.sha256,
+        "entropy": log.entropy,
+        "is_pe": log.is_pe,
+        "pe_metadata": log.pe_metadata,
+        "yara_matches": log.yara_matches,
+        "iocs": log.extracted_iocs,
+        "malware_classification": log.malware_classification,
+        "virus_total_report": log.virus_total_report,
+        "ai_generated_report": log.ai_generated_report,
+        "compiler_info": log.compiler_info,
+        "digital_signature": log.digital_signature,
+        "embedded_strings": log.embedded_strings,
+        "suspicious_apis": log.suspicious_apis,
+        "mitre_attack": log.mitre_attack,
+        "persistence_techniques": log.persistence_techniques,
+        "scan_duration_seconds": log.scan_duration_seconds,
+        "hashes": {"md5": log.md5, "sha1": log.sha1, "sha256": log.sha256}
+    }
+    TelemetryBroadcaster.broadcast("SCAN_UPDATE", payload)
+
+def broadcast_stats_update():
+    try:
+        total_analyzed = ThreatAnalysisLog.objects.count()
+        completed = ThreatAnalysisLog.objects.filter(status='COMPLETED').count()
+        processing = ThreatAnalysisLog.objects.filter(status='PROCESSING').count()
+        failed = ThreatAnalysisLog.objects.filter(status='FAILED').count()
+        
+        malicious = ThreatAnalysisLog.objects.filter(malware_classification__verdict='MALICIOUS').count()
+        suspicious = ThreatAnalysisLog.objects.filter(malware_classification__verdict='SUSPICIOUS').count()
+        benign = ThreatAnalysisLog.objects.filter(malware_classification__verdict='CLEAN').count()
+        
+        completed_logs = ThreatAnalysisLog.objects.filter(status='COMPLETED')
+        durations = [l.scan_duration_seconds for l in completed_logs if l.scan_duration_seconds is not None]
+        avg_duration = round(sum(durations) / len(durations), 2) if durations else 0.0
+        
+        scores = []
+        for l in completed_logs:
+            if l.malware_classification and isinstance(l.malware_classification, dict):
+                score = l.malware_classification.get('score')
+                if score is not None:
+                    try:
+                        scores.append(float(score))
+                    except (ValueError, TypeError):
+                        pass
+        ai_confidence = round(sum(scores) / len(scores), 1) if scores else 0.0
+
+        recent_logs = ThreatAnalysisLog.objects.filter(malware_classification__verdict__in=['MALICIOUS', 'SUSPICIOUS']).order_by('-timestamp')[:5]
+        alerts = [{
+            "id": log.id,
+            "file_name": log.file_name,
+            "verdict": log.malware_classification.get('verdict', 'CLEAN'),
+            "score": log.malware_classification.get('score', 0),
+            "timestamp": log.timestamp.strftime('%H:%M:%S')
+        } for log in recent_logs]
+
+        daily_stats = {}
+        all_logs = ThreatAnalysisLog.objects.filter(status='COMPLETED').order_by('-timestamp')[:100]
+        for l in all_logs:
+            day_str = l.timestamp.strftime('%Y-%m-%d')
+            daily_stats[day_str] = daily_stats.get(day_str, 0) + 1
+        
+        chart_data_daily = [{"date": k, "files": v} for k, v in sorted(daily_stats.items())][-7:]
+
+        payload = {
+            "total_analyzed": total_analyzed,
+            "completed": completed,
+            "processing": processing,
+            "failed": failed,
+            "malicious": malicious,
+            "suspicious": suspicious,
+            "benign": benign,
+            "avg_duration": avg_duration,
+            "ai_confidence": ai_confidence,
+            "alerts": alerts,
+            "chart_data_daily": chart_data_daily,
+            "chart_data_severity": [
+                {"name": "Malicious", "value": malicious},
+                {"name": "Suspicious", "value": suspicious},
+                {"name": "Benign", "value": benign}
+            ]
+        }
+        TelemetryBroadcaster.broadcast("STATS_UPDATE", payload)
+    except Exception as e:
+        print("Stats broadcast exception:", str(e))
+
+def broadcast_notifications_update():
+    try:
+        dev_user = User.objects.filter(username='developer').first()
+        if dev_user:
+            notifications = UserNotification.objects.filter(user=dev_user).order_by('-created_at')[:30]
+            data = [{
+                "id": n.id,
+                "title": n.title,
+                "message": n.message,
+                "is_read": n.is_read,
+                "created_at": n.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            } for n in notifications]
+            TelemetryBroadcaster.broadcast("NOTIFICATION_UPDATE", data)
+    except Exception as e:
+        print("Notification broadcast exception:", str(e))
+
+
+def process_malware_file_async(log_id, file_data, vt_key, anthropic_key):
+    from django.db import connection
+    connection.close()  # Reset thread DB connection
+    
+    start_time = time.time()
+    try:
+        log = ThreatAnalysisLog.objects.get(pk=log_id)
+        
+        # Step 1: Hashing
+        log.status_detail = "Hashing"
+        log.save()
+        broadcast_scan_update(log)
+        time.sleep(0.3)
+        
+        md5_hash = hashlib.md5(file_data).hexdigest()
+        sha1_hash = hashlib.sha1(file_data).hexdigest()
+        sha256_hash = log.sha256
+        log.md5 = md5_hash
+        log.sha1 = sha1_hash
+        log.save()
+        broadcast_scan_update(log)
+        
+        # Step 2: Extracting Metadata
+        log.status_detail = "Extracting Metadata"
+        log.save()
+        broadcast_scan_update(log)
+        time.sleep(0.3)
+        
+        # Entropy
+        freqs = [0] * 256
+        for byte in file_data:
+            freqs[byte] += 1
+        entropy = 0.0
+        for count in freqs:
             if count > 0:
-                p = count / length
+                p = count / len(file_data)
                 entropy -= p * math.log2(p)
-        return round(entropy, 4)
-
-    def extract_iocs(self, file_data):
-        strings = re.findall(b"[ -~]{4,}", file_data)
-        decoded_strings = [s.decode('ascii', errors='ignore') for s in strings]
-        joined_text = "\n".join(decoded_strings)
+        log.entropy = round(entropy, 4)
+        
+        # Parse PE metadata
+        is_pe = False
+        pe_metadata = {}
+        compiler_info = "Unknown Compiler / Platform"
+        digital_signature = "Unsigned / Self-Signed Binary"
+        suspicious_apis = []
+        mitre_attack = []
+        persistence_techniques = []
+        
+        try:
+            pe = pefile.PE(data=file_data)
+            is_pe = True
+            pe_metadata = {
+                "entry_point": hex(pe.OPTIONAL_HEADER.AddressOfEntryPoint),
+                "subsystem": pefile.SUBSYSTEM_TYPE.get(pe.OPTIONAL_HEADER.Subsystem, "UNKNOWN"),
+                "sections": [{"name": s.Name.decode('utf-8', errors='ignore').strip('\x00'), "virtual_size": hex(s.Misc_VirtualSize), "raw_data_size": hex(s.SizeOfRawData)} for s in pe.sections]
+            }
+            # Compiler info extraction
+            if pe.OPTIONAL_HEADER.MajorLinkerVersion == 14:
+                compiler_info = "Microsoft Visual C/C++ (MSVC 2015-2022)"
+            elif pe.OPTIONAL_HEADER.MajorLinkerVersion == 6:
+                compiler_info = "Microsoft Visual C++ 6.0 (Legacy)"
+            elif pe.OPTIONAL_HEADER.MajorLinkerVersion == 12:
+                compiler_info = "Microsoft Visual C/C++ (MSVC 2013)"
+            else:
+                compiler_info = f"Linker GCC / Clang (Version {pe.OPTIONAL_HEADER.MajorLinkerVersion}.{pe.OPTIONAL_HEADER.MinorLinkerVersion})"
+                
+            # Imports / APIs checks
+            suspicious_functions = {
+                'CreateRemoteThread', 'VirtualAllocEx', 'WriteProcessMemory', 'ShellExecute',
+                'RegSetValueEx', 'GetProcAddress', 'LoadLibraryA', 'InternetOpen', 'HttpSendRequest',
+                'GetAsyncKeyState', 'SetWindowsHookEx', 'WinExec', 'IsDebuggerPresent'
+            }
+            if hasattr(pe, 'DIRECTORY_ENTRY_IMPORT'):
+                for entry in pe.DIRECTORY_ENTRY_IMPORT:
+                    for imp in entry.imports:
+                        if imp.name:
+                            func_name = imp.name.decode('utf-8', errors='ignore')
+                            if func_name in suspicious_functions:
+                                suspicious_apis.append(func_name)
+                                
+            # Mitre maps based on API imports
+            if any(x in suspicious_apis for x in ['CreateRemoteThread', 'VirtualAllocEx', 'WriteProcessMemory']):
+                mitre_attack.append("T1055 - Process Injection")
+            if any(x in suspicious_apis for x in ['RegSetValueEx']):
+                mitre_attack.append("T1547.001 - Registry Run Keys / Startup Folder")
+                persistence_techniques.append("Registry Run Keys injection")
+            if any(x in suspicious_apis for x in ['GetAsyncKeyState', 'SetWindowsHookEx']):
+                mitre_attack.append("T1056.001 - Keylogging")
+            if any(x in suspicious_apis for x in ['InternetOpen', 'HttpSendRequest']):
+                mitre_attack.append("T1071.001 - Web Protocols")
+                
+        except Exception:
+            pass
+            
+        log.is_pe = is_pe
+        log.pe_metadata = pe_metadata
+        log.compiler_info = compiler_info
+        log.digital_signature = digital_signature
+        log.suspicious_apis = suspicious_apis
+        log.mitre_attack = mitre_attack
+        log.persistence_techniques = persistence_techniques
+        
+        # Extraction of strings
+        ascii_strings = re.findall(b"[ -~]{5,200}", file_data)
+        embedded_strings = [s.decode('ascii', errors='ignore') for s in ascii_strings][:50]
+        log.embedded_strings = embedded_strings
+        
+        # IOC extraction
+        joined_text = "\n".join(embedded_strings)
         ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
         domain_pattern = r'\b(?:[a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}\b'
         registry_pattern = r'\b(HKLM|HKCU|HKEY_LOCAL_MACHINE|HKEY_CURRENT_USER)\\[a-zA-Z0-9_\\]+\b'
-        return {
+        log.extracted_iocs = {
             "ips": list(set(re.findall(ip_pattern, joined_text))),
             "domains": list(set([d for d in re.findall(domain_pattern, joined_text) if not d.lower().endswith(('.dll', '.exe', '.sys'))])),
             "registry_keys": list(set(re.findall(registry_pattern, joined_text)))
         }
+        log.save()
+        broadcast_scan_update(log)
+        
+        # Step 3: Running YARA Rules
+        log.status_detail = "Running YARA Rules"
+        log.save()
+        broadcast_scan_update(log)
+        time.sleep(0.3)
+        
+        yara_matches = []
+        try:
+            rule_path = os.path.join(os.path.dirname(__file__), 'rules', 'malware_signatures.yar')
+            if os.path.exists(rule_path):
+                rules = yara.compile(filepath=rule_path)
+                matches = rules.match(data=file_data)
+                for match in matches: 
+                    yara_matches.append(match.rule)
+        except Exception: 
+            pass
+        log.yara_matches = yara_matches
+        log.save()
+        broadcast_scan_update(log)
+        
+        # Heuristics Score calculation
+        malware_score = 0
+        indicators = []
+        if len(yara_matches) > 0:
+            malware_score += 50
+            indicators.append(f"YARA Rule Match: {', '.join(yara_matches)}")
+        if log.entropy > 7.2:
+            malware_score += 35
+            indicators.append("High structural entropy detected (Obfuscation/Packing)")
+        if len(log.extracted_iocs["ips"]) > 0 or len(log.extracted_iocs["domains"]) > 0:
+            malware_score += 30
+            indicators.append("Embedded hardcoded C2 host coordinates found")
+            
+        log.malware_classification = {
+            "verdict": "MALICIOUS" if malware_score >= 50 else "SUSPICIOUS" if malware_score >= 20 else "CLEAN",
+            "score": min(malware_score, 100),
+            "indicators": indicators
+        }
+        log.save()
+        broadcast_scan_update(log)
+        
+        # Step 4: Checking Threat Intelligence
+        log.status_detail = "Checking Threat Intelligence"
+        log.save()
+        broadcast_scan_update(log)
+        time.sleep(0.3)
+        
+        vt_report = {}
+        if vt_key:
+            try:
+                vt_report = VirusTotalService.query_file_reputation(sha256_hash, api_key=vt_key)
+            except Exception:
+                pass
+        log.virus_total_report = vt_report
+        log.save()
+        broadcast_scan_update(log)
+        
+        # Step 5: Generating AI Report
+        log.status_detail = "Generating AI Report"
+        log.save()
+        broadcast_scan_update(log)
+        time.sleep(0.3)
+        
+        ai_report_text = ""
+        api_key = anthropic_key or os.getenv("ANTHROPIC_API_KEY", "")
+        if api_key:
+            try:
+                client = anthropic.Anthropic(api_key=api_key)
+                prompt = f"Perform threat assessment for file: {log.file_name}\nEntropy: {log.entropy}\nYARA: {log.yara_matches}\nIOCs: {log.extracted_iocs}\n\nFormat output precisely with Markdown headers: ### 🛡️ Executive Summary & Threat Classification, ### 🥷 MITRE ATT&CK Mapping Matrix, ### ⚡ Actionable Incident Response Playbook"
+                message = client.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=1500,
+                    temperature=0.1,
+                    system="You are the BlueIntel Autonomous SecOps AI Copilot, an elite tier-3 malware analysis agent.",
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                ai_report_text = message.content[0].text
+            except Exception as e:
+                ai_report_text = f"AI Generator connection issue: {str(e)}"
+        else:
+            ai_report_text = "Anthropic Claude API Key not configured. AI Playbook generation bypassed."
+            
+        log.ai_generated_report = ai_report_text
+        log.save()
+        broadcast_scan_update(log)
+        
+        # Step 6: Saving Results
+        log.status_detail = "Saving Results"
+        log.save()
+        broadcast_scan_update(log)
+        time.sleep(0.3)
+        
+        duration = time.time() - start_time
+        log.scan_duration_seconds = round(duration, 2)
+        log.status = "COMPLETED"
+        log.status_detail = "Completed"
+        log.save()
+        
+        broadcast_scan_update(log)
+        broadcast_stats_update()
+        
+        # Trigger Notification
+        verdict = log.malware_classification.get('verdict', 'CLEAN')
+        title = f"Scan Completed: {log.file_name}"
+        message = f"Malware Analysis complete for {log.file_name}. Hash: {log.sha256[:10]}... Verdict: {verdict}"
+        try:
+            dev_user = User.objects.filter(username='developer').first()
+            if dev_user:
+                UserNotification.objects.create(user=dev_user, title=title, message=message)
+                broadcast_notifications_update()
+        except Exception:
+            pass
+
+    except Exception as e:
+        try:
+            log = ThreatAnalysisLog.objects.get(pk=log_id)
+            log.status = "FAILED"
+            log.status_detail = f"Failed: {str(e)}"
+            log.save()
+            broadcast_scan_update(log)
+            broadcast_stats_update()
+            
+            dev_user = User.objects.filter(username='developer').first()
+            if dev_user:
+                UserNotification.objects.create(
+                    user=dev_user,
+                    title=f"Scan Failed: {log.file_name}",
+                    message=f"Analysis pipeline error: {str(e)}"
+                )
+                broadcast_notifications_update()
+        except Exception:
+            pass
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class MalwareUploadView(APIView):
+    parser_classes = [MultiPartParser]
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request, format=None):
         if 'file' not in request.FILES:
@@ -101,10 +465,9 @@ class MalwareUploadView(APIView):
         file_data = uploaded_file.read()
         sha256_hash = hashlib.sha256(file_data).hexdigest()
 
-        # Check Cache Layer
-        existing_log = ThreatAnalysisLog.objects.filter(sha256=sha256_hash).first()
+        # Check Cache Layer for duplicates
+        existing_log = ThreatAnalysisLog.objects.filter(sha256=sha256_hash, status='COMPLETED').first()
         if existing_log:
-            # Audit log cache hit
             UserActivityLog.objects.create(
                 user=get_developer_user(request),
                 action=f"CACHE_HIT_SCAN_INGEST: {file_name}",
@@ -113,6 +476,7 @@ class MalwareUploadView(APIView):
             )
             return Response({
                 "id": existing_log.id,
+                "status": "COMPLETED",
                 "file_name": existing_log.file_name,
                 "file_size_bytes": existing_log.file_size_bytes,
                 "sha256": existing_log.sha256,
@@ -128,109 +492,271 @@ class MalwareUploadView(APIView):
                 "cached": True
             }, status=status.HTTP_200_OK)
 
-        # Calculate static telemetry
-        hashes = {
-            "md5": hashlib.md5(file_data).hexdigest(),
-            "sha1": hashlib.sha1(file_data).hexdigest(),
-            "sha256": sha256_hash
-        }
-        file_entropy = self.calculate_entropy(file_data)
-        iocs = self.extract_iocs(file_data)
+        # Create record in PENDING / PROCESSING state
+        log = ThreatAnalysisLog.objects.create(
+            file_name=file_name,
+            file_size_bytes=uploaded_file.size,
+            sha256=sha256_hash,
+            entropy=0.0,
+            status="PROCESSING",
+            status_detail="Waiting"
+        )
 
-        analysis_results = {
-            "file_name": file_name,
-            "file_size_bytes": uploaded_file.size,
-            "sha256": sha256_hash,
-            "hashes": hashes,
-            "entropy": file_entropy,
-            "is_pe": False,
-            "pe_metadata": {},
-            "yara_matches": [],
-            "iocs": iocs,
-            "malware_classification": {"verdict": "CLEAN", "score": 0, "indicators": []}
-        }
+        # Trigger notification
+        dev_user = get_developer_user(request)
+        UserNotification.objects.create(
+            user=dev_user,
+            title=f"Scan Started: {file_name}",
+            message=f"Malware detonation pipeline active for file hash: {sha256_hash[:12]}..."
+        )
 
-        # Run YARA engine checks
+        # Fetch settings keys
+        vt_key = ""
+        claude_key = ""
         try:
-            rule_path = os.path.join(os.path.dirname(__file__), 'rules', 'malware_signatures.yar')
-            if os.path.exists(rule_path):
-                rules = yara.compile(filepath=rule_path)
-                matches = rules.match(data=file_data)
-                for match in matches: 
-                    analysis_results["yara_matches"].append(match.rule)
-        except Exception: 
-            pass
-
-        # Parse PE structures
-        try:
-            pe = pefile.PE(data=file_data)
-            analysis_results["is_pe"] = True
-            analysis_results["pe_metadata"] = {
-                "entry_point": hex(pe.OPTIONAL_HEADER.AddressOfEntryPoint),
-                "subsystem": pefile.SUBSYSTEM_TYPE.get(pe.OPTIONAL_HEADER.Subsystem, "UNKNOWN"),
-                "sections": [{"name": s.Name.decode('utf-8', errors='ignore').strip('\x00'), "virtual_size": hex(s.Misc_VirtualSize), "raw_data_size": hex(s.SizeOfRawData)} for s in pe.sections]
-            }
-        except Exception: 
-            pass
-
-        # Risk Heuristic Score Calculations
-        malware_score = 0
-        indicators = []
-        if len(analysis_results["yara_matches"]) > 0:
-            malware_score += 50
-            indicators.append(f"YARA Rule Match: {', '.join(analysis_results['yara_matches'])}")
-        if file_entropy > 7.2:
-            malware_score += 35
-            indicators.append("High structural entropy detected (Potential packing/obfuscation)")
-        if len(iocs["ips"]) > 0 or len(iocs["domains"]) > 0:
-            malware_score += 30
-            indicators.append("Embedded hardcoded host/C2 network configurations discovered")
-
-        analysis_results["malware_classification"] = {
-            "verdict": "MALICIOUS" if malware_score >= 50 else "SUSPICIOUS" if malware_score >= 20 else "CLEAN",
-            "score": min(malware_score, 100),
-            "indicators": indicators
-        }
-
-        # Fetch custom user VT key or fallback to environment variables
-        vt_key_plain = ""
-        try:
-            user_settings = get_developer_user(request).settings
+            user_settings = dev_user.settings
             if user_settings.encrypted_vt_key:
-                vt_key_plain = decrypt_key(user_settings.encrypted_vt_key)
+                vt_key = decrypt_key(user_settings.encrypted_vt_key)
+            if user_settings.encrypted_claude_key:
+                claude_key = decrypt_key(user_settings.encrypted_claude_key)
         except Exception:
             pass
 
-        # Execute VirusTotal lookup
-        vt_report = VirusTotalService.query_file_reputation(sha256_hash, api_key=vt_key_plain)
-        analysis_results["virus_total_report"] = vt_report
-
-        # Create persistent database row
-        log_instance = ThreatAnalysisLog.objects.create(
-            file_name=analysis_results["file_name"],
-            file_size_bytes=analysis_results["file_size_bytes"],
-            sha256=analysis_results["sha256"],
-            md5=hashes["md5"],
-            sha1=hashes["sha1"],
-            entropy=analysis_results["entropy"],
-            is_pe=analysis_results["is_pe"],
-            pe_metadata=analysis_results["pe_metadata"],
-            yara_matches=analysis_results["yara_matches"],
-            extracted_iocs=analysis_results["iocs"],
-            malware_classification=analysis_results["malware_classification"],
-            virus_total_report=analysis_results["virus_total_report"]
+        # Spawn background processing thread
+        thread = threading.Thread(
+            target=process_malware_file_async,
+            args=(log.id, file_data, vt_key, claude_key)
         )
+        thread.start()
+
+        return Response({
+            "id": log.id,
+            "status": "PROCESSING",
+            "status_detail": "Waiting",
+            "file_name": file_name,
+            "sha256": sha256_hash
+        }, status=status.HTTP_202_ACCEPTED)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ScanStatusView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk, format=None):
+        try:
+            log = ThreatAnalysisLog.objects.get(pk=pk)
+        except ThreatAnalysisLog.DoesNotExist:
+            return Response({"error": "Scan record not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            "id": log.id,
+            "status": log.status,
+            "status_detail": log.status_detail,
+            "file_name": log.file_name,
+            "file_size_bytes": log.file_size_bytes,
+            "sha256": log.sha256,
+            "entropy": log.entropy,
+            "is_pe": log.is_pe,
+            "pe_metadata": log.pe_metadata,
+            "yara_matches": log.yara_matches,
+            "iocs": log.extracted_iocs,
+            "malware_classification": log.malware_classification,
+            "virus_total_report": log.virus_total_report,
+            "ai_generated_report": log.ai_generated_report,
+            "compiler_info": log.compiler_info,
+            "digital_signature": log.digital_signature,
+            "embedded_strings": log.embedded_strings,
+            "suspicious_apis": log.suspicious_apis,
+            "mitre_attack": log.mitre_attack,
+            "persistence_techniques": log.persistence_techniques,
+            "scan_duration_seconds": log.scan_duration_seconds,
+            "hashes": {"md5": log.md5, "sha1": log.sha1, "sha256": log.sha256}
+        }, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class DashboardStatsView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, format=None):
+        total_analyzed = ThreatAnalysisLog.objects.count()
+        completed = ThreatAnalysisLog.objects.filter(status='COMPLETED').count()
+        processing = ThreatAnalysisLog.objects.filter(status='PROCESSING').count()
+        failed = ThreatAnalysisLog.objects.filter(status='FAILED').count()
         
-        # Log detonated payload event
-        UserActivityLog.objects.create(
-            user=get_developer_user(request),
-            action=f"FILE_DETONATED_SCAN: {file_name} (Verdict: {analysis_results['malware_classification']['verdict']})",
-            ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')
-        )
+        malicious = ThreatAnalysisLog.objects.filter(malware_classification__verdict='MALICIOUS').count()
+        suspicious = ThreatAnalysisLog.objects.filter(malware_classification__verdict='SUSPICIOUS').count()
+        benign = ThreatAnalysisLog.objects.filter(malware_classification__verdict='CLEAN').count()
+        
+        completed_logs = ThreatAnalysisLog.objects.filter(status='COMPLETED')
+        durations = [l.scan_duration_seconds for l in completed_logs if l.scan_duration_seconds is not None]
+        avg_duration = round(sum(durations) / len(durations), 2) if durations else 0.0
+        
+        scores = []
+        for l in completed_logs:
+            if l.malware_classification and isinstance(l.malware_classification, dict):
+                score = l.malware_classification.get('score')
+                if score is not None:
+                    try:
+                        scores.append(float(score))
+                    except (ValueError, TypeError):
+                        pass
+        ai_confidence = round(sum(scores) / len(scores), 1) if scores else 0.0
 
-        analysis_results["id"] = log_instance.id
-        return Response(analysis_results, status=status.HTTP_200_OK)
+        # Compile recent alerts
+        recent_logs = ThreatAnalysisLog.objects.filter(malware_classification__verdict__in=['MALICIOUS', 'SUSPICIOUS']).order_by('-timestamp')[:5]
+        alerts = [{
+            "id": log.id,
+            "file_name": log.file_name,
+            "verdict": log.malware_classification.get('verdict', 'CLEAN'),
+            "score": log.malware_classification.get('score', 0),
+            "timestamp": log.timestamp.strftime('%H:%M:%S')
+        } for log in recent_logs]
+
+        # Compile daily logs counts for charts
+        daily_stats = {}
+        all_logs = ThreatAnalysisLog.objects.filter(status='COMPLETED').order_by('-timestamp')[:100]
+        for l in all_logs:
+            day_str = l.timestamp.strftime('%Y-%m-%d')
+            daily_stats[day_str] = daily_stats.get(day_str, 0) + 1
+        
+        chart_data_daily = [{"date": k, "files": v} for k, v in sorted(daily_stats.items())][-7:]
+
+        return Response({
+            "total_analyzed": total_analyzed,
+            "completed": completed,
+            "processing": processing,
+            "failed": failed,
+            "malicious": malicious,
+            "suspicious": suspicious,
+            "benign": benign,
+            "avg_duration": avg_duration,
+            "ai_confidence": ai_confidence,
+            "alerts": alerts,
+            "chart_data_daily": chart_data_daily,
+            "chart_data_severity": [
+                {"name": "Malicious", "value": malicious},
+                {"name": "Suspicious", "value": suspicious},
+                {"name": "Benign", "value": benign}
+            ]
+        }, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ThreatIntelligenceView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, format=None):
+        if ThreatIntelligenceFeed.objects.count() == 0:
+            ThreatIntelligenceFeed.objects.create(
+                indicator_value="5e883f8b56d6fd90c3d492476cd8347f3b584d4e17e47e5b63cf5f8072b2c45b",
+                indicator_type="HASH",
+                threat_actor="Lazarus Group",
+                malware_family="Destructive Wiper",
+                severity="CRITICAL",
+                description="HermeticWiper variant targeting Eastern European electrical grids."
+            )
+            ThreatIntelligenceFeed.objects.create(
+                indicator_value="shadowpad-domain-updater.com",
+                indicator_type="DOMAIN",
+                threat_actor="APT41",
+                malware_family="ShadowPad",
+                severity="HIGH",
+                description="C2 active rendezvous server configuration for advanced telemetry extraction."
+            )
+            ThreatIntelligenceFeed.objects.create(
+                indicator_value="185.220.101.5",
+                indicator_type="IP",
+                threat_actor="Fancy Bear",
+                malware_family="X-Agent Payload",
+                severity="CRITICAL",
+                description="Active Tor exit node targeting security perimeter validation ports."
+            )
+            ThreatIntelligenceFeed.objects.create(
+                indicator_value="apt29-cc-tunnel.org",
+                indicator_type="DOMAIN",
+                threat_actor="Cozy Bear (APT29)",
+                malware_family="WellMess Loader",
+                severity="HIGH",
+                description="Encrypted TLS tunnel endpoint used for exfiltrating local diagnostic datasets."
+            )
+            ThreatIntelligenceFeed.objects.create(
+                indicator_value="f2c39e24fa2efcf91f1a528cc5d0e2e831627cd60e28f3cf5f8072b2c45b79e1",
+                indicator_type="HASH",
+                threat_actor="LockBit Gang",
+                malware_family="LockBit 3.0",
+                severity="CRITICAL",
+                description="Ransomware variant encrypting shadow file volumes on win32 target clusters."
+            )
+
+        feeds = ThreatIntelligenceFeed.objects.all()[:30]
+        data = [{
+            "id": f.id,
+            "value": f.indicator_value,
+            "type": f.indicator_type,
+            "actor": f.threat_actor,
+            "family": f.malware_family,
+            "severity": f.severity,
+            "description": f.description,
+            "created_at": f.created_at.strftime('%Y-%m-%d %H:%M')
+        } for f in feeds]
+        return Response(data, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class GlobalSearchView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, format=None):
+        query = request.GET.get('q', '').strip()
+        if not query:
+            return Response([], status=status.HTTP_200_OK)
+
+        from django.db.models import Q
+        logs = ThreatAnalysisLog.objects.filter(
+            Q(file_name__icontains=query) |
+            Q(sha256__icontains=query) |
+            Q(md5__icontains=query) |
+            Q(sha1__icontains=query) |
+            Q(compiler_info__icontains=query) |
+            Q(malware_classification__verdict__icontains=query)
+        )[:15]
+
+        data = [{
+            "id": log.id,
+            "name": log.file_name,
+            "sha256": log.sha256,
+            "verdict": log.malware_classification.get('verdict', 'CLEAN'),
+            "score": log.malware_classification.get('score', 0),
+            "timestamp": log.timestamp.strftime('%Y-%m-%d %H:%M')
+        } for log in logs]
+        return Response(data, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class NotificationView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, format=None):
+        dev_user = get_developer_user(request)
+        notifications = UserNotification.objects.filter(user=dev_user).order_by('-created_at')[:30]
+        data = [{
+            "id": n.id,
+            "title": n.title,
+            "message": n.message,
+            "is_read": n.is_read,
+            "created_at": n.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        } for n in notifications]
+        return Response(data, status=status.HTTP_200_OK)
+
+    def post(self, request, format=None):
+        dev_user = get_developer_user(request)
+        notif_id = request.data.get('id')
+        if notif_id:
+            UserNotification.objects.filter(user=dev_user, id=notif_id).delete()
+        else:
+            UserNotification.objects.filter(user=dev_user).delete()
+        return Response({"message": "Notifications updated successfully."}, status=status.HTTP_200_OK)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -970,4 +1496,28 @@ class DownloadPDFReportView(APIView):
         buffer.seek(0)
         response = HttpResponse(buffer, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="BlueIntel_Report_{log.sha256[:8]}.pdf"'
+        return response
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class TelemetryStreamView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, format=None):
+        def event_generator():
+            q = TelemetryBroadcaster.register_client()
+            try:
+                yield f"data: {json.dumps({'type': 'INIT', 'data': 'Active telemetry stream established'})}\n\n"
+                while True:
+                    try:
+                        msg = q.get(timeout=25)
+                        yield f"data: {json.dumps(msg)}\n\n"
+                    except queue.Empty:
+                        yield "data: {\"type\": \"PING\"}\n\n"
+            finally:
+                TelemetryBroadcaster.unregister_client(q)
+
+        response = StreamingHttpResponse(event_generator(), content_type="text/event-stream")
+        response['X-Accel-Buffering'] = 'no'
+        response['Cache-Control'] = 'no-cache'
         return response

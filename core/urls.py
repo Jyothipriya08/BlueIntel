@@ -17,7 +17,13 @@ from analyzer.views import (
     DownloadPDFReportView,
     PasswordResetRequestView,
     PasswordResetVerifyView,
-    PasswordChangeView
+    PasswordChangeView,
+    ScanStatusView,
+    DashboardStatsView,
+    ThreatIntelligenceView,
+    GlobalSearchView,
+    NotificationView,
+    TelemetryStreamView
 )
 
 urlpatterns = [
@@ -54,6 +60,12 @@ urlpatterns = [
     path('api/v1/upload/', MalwareUploadView.as_view(), name='file_upload_analysis'),
     path('api/v1/ai-report/', AIThreatReportView.as_view(), name='ai_threat_report'),
     path('api/v1/history-ledger/', ScanHistoryLedgerView.as_view(), name='history_ledger'),
+    path('api/v1/scan-status/<int:pk>/', ScanStatusView.as_view(), name='api_scan_status'),
+    path('api/v1/dashboard-stats/', DashboardStatsView.as_view(), name='api_dashboard_stats'),
+    path('api/v1/threat-intelligence/', ThreatIntelligenceView.as_view(), name='api_threat_intelligence'),
+    path('api/v1/global-search/', GlobalSearchView.as_view(), name='api_global_search'),
+    path('api/v1/notifications/', NotificationView.as_view(), name='api_notifications'),
+    path('api/v1/telemetry-stream/', TelemetryStreamView.as_view(), name='api_telemetry_stream'),
     
     # Downloadable analyst briefing PDF generator route
     path('api/v1/reports/<int:pk>/download/', DownloadPDFReportView.as_view(), name='download_report_pdf'),
