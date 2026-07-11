@@ -97,22 +97,54 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 # --- DATABASE STRUCTURING ---
 
+DB_USER = os.getenv('DB_USER', '')
+DB_PASSWORD = os.getenv('DB_PASSWORD', '')
+DB_HOST = os.getenv('DB_HOST', '')
+DB_PORT = os.getenv('DB_PORT', '')
+DB_NAME = os.getenv('DB_NAME', '')
+
+MONGO_URI = os.getenv('MONGO_URI', '')
+MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', '')
+
 DATABASES = {
-    # Primary Storage: Handles your relational identity tables locally out of db.sqlite3
+    # SQL Primary Relational Database (PostgreSQL if environment keys exist, SQLite fallback)
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql' if DB_USER and DB_NAME else 'django.db.backends.sqlite3',
+        'NAME': DB_NAME if DB_USER and DB_NAME else BASE_DIR / 'db.sqlite3',
+        'USER': DB_USER,
+        'PASSWORD': DB_PASSWORD,
+        'HOST': DB_HOST,
+        'PORT': DB_PORT,
     },
-    # Secondary Storage: Acts as your local malware sandbox document repository out of db_sandbox.sqlite3
-    # Bypasses local background MongoDB connection dependencies to prevent system timeouts
+    # MongoDB Secondary Document Pool (using djongo, SQLite fallback)
     'malware_sandbox_pool': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db_sandbox.sqlite3',
+        'ENGINE': 'djongo' if MONGO_URI else 'django.db.backends.sqlite3',
+        'CLIENT': {
+            'host': MONGO_URI,
+        } if MONGO_URI else {},
+        'NAME': MONGO_DB_NAME if MONGO_URI and MONGO_DB_NAME else BASE_DIR / 'db_sandbox.sqlite3',
     }
 }
 
 # Automated router script to keep local database tables cleanly separated
 DATABASE_ROUTERS = ['core.db_routers.MalwareIntelRouter']
+
+# --- EMAIL TRANSMISSION ENGINE CONFIGURATION ---
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+if EMAIL_HOST_USER:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+    EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+    EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'BlueIntel Security <noreply@blueintel.com>')
+else:
+    # Local developer debug output - prints email body & code straight to console window
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'BlueIntel Security <noreply@blueintel.com>'
+
+# --- AES CONFIGURATION ENCRYPTION WRAPPER KEYS ---
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '')
 
 
 # --- PASSWORD VALIDATION METRICS ---
@@ -142,6 +174,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 
 # --- AUTHENTICATION BACKENDS CONFIGURATION ---
@@ -157,7 +190,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': os.getenv('GOOGLE_CLIENT_ID', '895102687707-0dvl4j9tudtbi22m0qj1t3fum2o4vu8r.apps.googleusercontent.com'),
+            'client_id': os.getenv('GOOGLE_CLIENT_ID', ''),
             'secret': os.getenv('GOOGLE_CLIENT_SECRET', ''),
             'key': ''
         },
@@ -190,8 +223,8 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 ACCOUNT_LOGOUT_ON_GET = True
 
 # --- OAUTH SUCCESS REDIRECT ROUTING ---
-LOGIN_REDIRECT_URL = 'http://localhost:5173/'
-LOGOUT_REDIRECT_URL = 'http://localhost:5173/'
+LOGIN_REDIRECT_URL = 'http://127.0.0.1:5173/login?auth=success'
+LOGOUT_REDIRECT_URL = 'http://127.0.0.1:5173/'
 
 # Point to your isolated core/adapters.py file (prevents AppRegistryNotReady circular errors)
 SOCIALACCOUNT_ADAPTER = 'core.adapters.CustomSocialAccountAdapter'

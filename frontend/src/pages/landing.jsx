@@ -45,16 +45,13 @@ export default function Landing() {
             <a href="#metrics" className="hover:text-white transition-colors">Telemetry</a>
           </div>
           <div className="flex items-center space-x-4">
-            <button onClick={() => navigate('/login')} className="px-5 py-2.5 text-xs font-mono font-bold uppercase tracking-widest border border-[#25a5ff]/30 text-white rounded-xl hover:bg-[#25a5ff]/10 transition-all cursor-pointer">
-              Sign In
-            </button>
-            <button onClick={() => navigate('/signup')} className="px-5 py-2.5 text-xs font-mono font-bold uppercase tracking-widest bg-gradient-to-r from-[#1e3a8a] to-[#25a5ff] text-white rounded-xl shadow-[0_4px_20px_rgba(37,165,255,0.2)] hover:scale-105 transition-all cursor-pointer">
-              Get Started
+            <button onClick={() => navigate('/dashboard')} className="px-5 py-2.5 text-xs font-mono font-bold uppercase tracking-widest bg-gradient-to-r from-[#1e3a8a] to-[#25a5ff] text-white rounded-xl shadow-[0_4px_20px_rgba(37,165,255,0.2)] hover:scale-105 transition-all cursor-pointer">
+              Launch Console
             </button>
           </div>
         </div>
       </nav>
-
+ 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center pt-32 px-6 z-10">
         <div className="max-w-4xl mx-auto text-center space-y-8">
@@ -68,7 +65,7 @@ export default function Landing() {
             "Analyze, Detect, Investigate and Respond to Malware Threats using Artificial Intelligence." Engineered for instantaneous static unpacking, dynamic process virtualization, and neural signature playbooks.
           </p>
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
-            <button onClick={() => navigate('/login')} className="w-full sm:w-auto px-8 py-4 font-mono font-bold uppercase tracking-widest text-xs rounded-xl bg-[#25a5ff] text-black hover:bg-white hover:shadow-[0_0_30px_#25a5ff] transition-all flex items-center justify-center gap-2 group cursor-pointer">
+            <button onClick={() => navigate('/dashboard')} className="w-full sm:w-auto px-8 py-4 font-mono font-bold uppercase tracking-widest text-xs rounded-xl bg-[#25a5ff] text-black hover:bg-white hover:shadow-[0_0_30px_#25a5ff] transition-all flex items-center justify-center gap-2 group cursor-pointer">
               Access Security Console <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </button>
           </div>

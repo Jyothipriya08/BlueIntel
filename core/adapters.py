@@ -12,4 +12,4 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
 
     def get_connect_redirect_url(self, request, sociallogin):
         # Force redirection directly back to your local React dev server port
-        return 'http://localhost:5173/?auth=success'
+        return 'http://127.0.0.1:5173/?auth=success'

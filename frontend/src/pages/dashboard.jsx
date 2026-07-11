@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Binary, ShieldAlert, FileText, BarChart3, Bot, LogOut, 
   Upload, AlertTriangle, Mail, Lock, Eye, EyeOff, Shield, Terminal, Zap,
-  Copy, Check, FileCode, Cpu, Radio, Network, History, Database, ArrowRight
+  Copy, Check, FileCode, Cpu, Radio, Network, History, Database, ArrowRight,
+  Settings as SettingsIcon, FileDown
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import logoImg from '../assets/logo.png';
@@ -27,12 +28,11 @@ export default function Dashboard() {
   const [copiedKey, setCopiedKey] = useState(null);
   const [sandboxTab, setSandboxTab] = useState('tree');
   
+  // --- USER PROFILE STATE ---
+  const [profile, setProfile] = useState({ username: 'Operator', email: '', date_joined: '', activities: [] });
+
   // --- HISTORICAL THREAT LEDGER STORAGE ---
-  const [scanHistory, setScanHistory] = useState([
-    { name: 'mfe_detonate.exe', time: '14:12', hash: '8f7a...3d2e', verdict: 'MALICIOUS', score: 85 },
-    { name: 'update_patch.msi', time: '12:04', hash: '4b2c...9e1a', verdict: 'SUSPICIOUS', score: 45 },
-    { name: 'billing_statement.pdf', time: '09:44', hash: '1a2b...3c4d', verdict: 'CLEAN', score: 5 },
-  ]);
+  const [scanHistory, setScanHistory] = useState([]);
   
   // --- CHAT CONSOLE LOGIC ---
   const [chatInput, setChatInput] = useState('');
@@ -40,17 +40,27 @@ export default function Dashboard() {
     { role: 'assistant', text: 'System grid unified. Secure telemetry socket ready for analytical prompts.' }
   ]);
 
-  const token = localStorage.getItem('token');
+  // Fetch operator profile from database logs
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/v1/profile/');
+        if (response.ok) {
+          const data = await response.json();
+          setProfile(data);
+        }
+      } catch (err) {
+        console.error("Failed to load operator database profile.");
+      }
+    };
+    fetchProfile();
+  }, []);
 
-  // Automated mounting effect to stream historical tables from Django DB
+  // Stream history ledger tables from database
   useEffect(() => {
     const fetchHistoryLedger = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/v1/history-ledger/', {
-          headers: {
-            'Authorization': `Token ${token}`
-          }
-        });
+        const response = await fetch('http://127.0.0.1:8000/api/v1/history-ledger/');
         if (response.ok) {
           const historyData = await response.json();
           setScanHistory(historyData);
@@ -59,10 +69,8 @@ export default function Dashboard() {
         console.error("Database connection failure streaming history arrays.");
       }
     };
-    if (token) {
-      fetchHistoryLedger();
-    }
-  }, [token, analysisResult]);
+    fetchHistoryLedger();
+  }, [analysisResult]);
 
   const triggerCopy = (text, key) => {
     navigator.clipboard.writeText(text);
@@ -91,19 +99,20 @@ export default function Dashboard() {
     try {
       const response = await fetch('http://127.0.0.1:8000/api/v1/upload/', {
         method: 'POST',
-        headers: {
-          'Authorization': `Token ${token}`
-        },
         body: formData, 
       });
 
-      if (!response.ok) throw new Error('Analysis engine failure.');
-
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Analysis engine failure.');
+      }
+
       setAnalysisResult(data); 
 
       setScanHistory(prev => [
         { 
+          id: data.id,
           name: data.file_name, 
           time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), 
           hash: data.sha256 ? `${data.sha256.slice(0,4)}...${data.sha256.slice(-4)}` : 'N/A', 
@@ -121,8 +130,7 @@ export default function Dashboard() {
       const aiResponse = await fetch('http://127.0.0.1:8000/api/v1/ai-report/', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Token ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ "analysis_results": data })
       });
@@ -132,12 +140,12 @@ export default function Dashboard() {
         setAnalysisResult(prev => ({ ...prev, ai_generated_report: aiData.report }));
         setChatLog(prev => [...prev, { role: 'assistant', text: "🤖 Comprehensive AI report received from Claude 3.5 Sonnet. Playbook mapping ready." }]);
       } else {
-        setAnalysisResult(prev => ({ ...prev, ai_generated_report: "❌ AI Compilation Failed: Check server log keys or usage credits." }));
+        const aiErr = await aiResponse.json();
+        setAnalysisResult(prev => ({ ...prev, ai_generated_report: `❌ AI Compilation Failed: ${aiErr.error || 'Check Settings API keys.'}` }));
       }
     } catch (error) {
       console.error(error);
-      alert('Error connecting to Django security console matrix.');
-      setAnalysisResult(prev => ({ ...prev, ai_generated_report: "❌ Connection pipeline error." }));
+      alert(error.message || 'Error connecting to Django security console matrix.');
     } finally {
       setUploading(false);
     }
@@ -154,8 +162,7 @@ export default function Dashboard() {
       const aiResponse = await fetch('http://127.0.0.1:8000/api/v1/ai-report/', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Token ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
           "analysis_results": analysisResult || { "file_name": "No current file active" },
@@ -172,20 +179,13 @@ export default function Dashboard() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('http://127.0.0.1:8000/api/v1/auth/logout/', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Token ${token}`
-        }
-      });
-    } catch (err) {
-      console.error("Logout request error: ", err);
-    } finally {
-      localStorage.removeItem('token');
-      navigate('/login');
-    }
+  const handleDownloadPDF = (logId) => {
+    if (!logId) return;
+    window.open(`http://127.0.0.1:8000/api/v1/reports/${logId}/download/`, '_blank');
+  };
+
+  const handleLogout = () => {
+    navigate('/');
   };
 
   return (
@@ -255,14 +255,17 @@ export default function Dashboard() {
         </div>
 
         <div className="border-t border-[#25a5ff]/10 pt-5 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#25a5ff]/20 to-purple-500/10 text-[#25a5ff] flex items-center justify-center text-xs font-black border border-[#25a5ff]/30 shadow-md">L3</div>
-            <div>
-              <p className="text-xs font-bold text-white">Operator-Jyothi</p>
-              <p className="text-[9px] text-[#25a5ff] font-mono font-bold uppercase tracking-widest">SecOps Lead</p>
+          <div className="flex items-center space-x-3 max-w-[60%]">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#25a5ff]/20 to-purple-500/10 text-[#25a5ff] flex items-center justify-center text-xs font-black border border-[#25a5ff]/30 shadow-md shrink-0">L3</div>
+            <div className="overflow-hidden">
+              <p className="text-xs font-bold text-white truncate">{profile.username}</p>
+              <p className="text-[8px] text-[#25a5ff] font-mono font-bold uppercase tracking-widest truncate">{profile.email || 'SecOps Lead'}</p>
             </div>
           </div>
-          <button onClick={handleLogout} className="text-[#425265] hover:text-red-400 p-2.5 rounded-xl border border-transparent hover:border-red-500/10 hover:bg-red-500/5 transition-all cursor-pointer"><LogOut size={16} /></button>
+          <div className="flex items-center space-x-1 shrink-0">
+            <button onClick={() => navigate('/settings')} className="text-[#425265] hover:text-[#25a5ff] p-2 rounded-xl border border-transparent hover:border-[#25a5ff]/10 hover:bg-[#25a5ff]/5 transition-all cursor-pointer"><SettingsIcon size={15} /></button>
+            <button onClick={handleLogout} className="text-[#425265] hover:text-red-400 p-2 rounded-xl border border-transparent hover:border-red-500/10 hover:bg-red-500/5 transition-all cursor-pointer"><LogOut size={15} /></button>
+          </div>
         </div>
       </aside>
 
@@ -291,7 +294,7 @@ export default function Dashboard() {
                   <h3 className="text-lg font-bold tracking-wider text-white uppercase">
                     {uploading ? 'Ingesting Payload Asset into Sandbox Cache...' : 'Detonate Suspicious Threat Payload'}
                   </h3>
-                  <p className="text-xs text-[#576575] font-mono max-w-sm mt-1 uppercase tracking-wider">Supports Win32 PE Binaries, Text Scripts, ELF Structures</p>
+                  <p className="text-xs text-[#576575] font-mono max-w-sm mt-1 uppercase tracking-wider">Win32 PE, ELFs, PDFs, Office, Zip, Rar, Iso, Apk, JS, PS1, Bat</p>
                   {!uploading && (
                     <div className="mt-5 px-5 py-2.5 bg-[#0e1424] border border-[#25a5ff]/30 text-[#25a5ff] text-xs font-mono font-bold uppercase tracking-widest rounded-xl shadow-md group-hover:bg-[#25a5ff] group-hover:text-black transition-all">
                       Select File Stream
@@ -309,8 +312,12 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3 font-mono text-xs">
-                      <span className="text-[#576575] uppercase tracking-wider">Pivot to Sidebar Panel:</span>
-                      <button onClick={() => switchTab('static_parser')} className="px-4 py-2.5 bg-[#121927] border border-[#25a5ff]/20 hover:border-[#25a5ff] rounded-xl font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer">Static Data <ArrowRight size={14}/></button>
+                      <button onClick={() => handleDownloadPDF(analysisResult.id)} className="px-4 py-2.5 bg-[#0a1824] border border-emerald-500/30 hover:border-emerald-400 rounded-xl font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer text-emerald-400 hover:text-white">
+                        <FileDown size={14}/> Download PDF
+                      </button>
+                      <button onClick={() => switchTab('static_parser')} className="px-4 py-2.5 bg-[#121927] border border-[#25a5ff]/20 hover:border-[#25a5ff] rounded-xl font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer">
+                        Static Data <ArrowRight size={14}/>
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -344,6 +351,7 @@ export default function Dashboard() {
                               <th className="pb-3 uppercase tracking-wider">Timestamp</th>
                               <th className="pb-3 uppercase tracking-wider">Signature Tracking</th>
                               <th className="pb-3 uppercase tracking-wider text-right">Hazard Index Evaluation</th>
+                              <th className="pb-3 uppercase tracking-wider text-center">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-white/5">
@@ -358,6 +366,11 @@ export default function Dashboard() {
                                     row.verdict === 'SUSPICIOUS' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
                                     'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                   }`}>{row.verdict} ({row.score})</span>
+                                </td>
+                                <td className="py-3.5 text-center">
+                                  <button onClick={() => handleDownloadPDF(row.id)} className="text-[#576575] hover:text-[#25a5ff] cursor-pointer" title="Download report PDF">
+                                    <FileDown size={14} />
+                                  </button>
                                 </td>
                               </tr>
                             ))}
@@ -389,9 +402,14 @@ export default function Dashboard() {
                           {analysisResult.malware_classification.indicators.length === 0 && <li>No critical code anomalies discovered. Binary structures standard.</li>}
                         </ul>
                       </div>
-                      <div className="bg-black/40 border border-white/5 p-4 rounded-xl text-center font-mono min-w-[100px]">
-                        <p className="text-[9px] text-[#576575] font-bold uppercase tracking-wider">Risk Score</p>
-                        <p className="text-2xl font-black text-white mt-0.5">{analysisResult.malware_classification.score}<span className="text-xs text-[#576575]">/100</span></p>
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="bg-black/40 border border-white/5 p-4 rounded-xl text-center font-mono min-w-[100px]">
+                          <p className="text-[9px] text-[#576575] font-bold uppercase tracking-wider">Risk Score</p>
+                          <p className="text-2xl font-black text-white mt-0.5">{analysisResult.malware_classification.score}<span className="text-xs text-[#576575]">/100</span></p>
+                        </div>
+                        <button onClick={() => handleDownloadPDF(analysisResult.id)} className="px-3 py-1.5 bg-[#0a1824] border border-emerald-500/30 text-[9px] font-mono font-bold uppercase rounded-lg cursor-pointer text-emerald-400 hover:text-white flex items-center gap-1.5 transition-all">
+                          <FileDown size={11} /> PDF Report
+                        </button>
                       </div>
                     </div>
                   )}
@@ -561,7 +579,7 @@ export default function Dashboard() {
                     {[
                       { title: 'Network C2 IPs', data: analysisResult.iocs.ips, color: 'text-red-400', border: 'border-red-500/20', bg: 'bg-red-500/5' },
                       { title: 'Callout Domains', data: analysisResult.iocs.domains, color: 'text-orange-400', border: 'border-orange-500/20', bg: 'bg-orange-500/5' },
-                      { title: 'Windows Registry Keys', data: analysisResult.iocs.registry_keys, data: analysisResult.iocs.registry_keys, color: 'text-yellow-400', border: 'border-yellow-500/20', bg: 'bg-yellow-500/5' },
+                      { title: 'Windows Registry Keys', data: analysisResult.iocs.registry_keys, color: 'text-yellow-400', border: 'border-yellow-500/20', bg: 'bg-yellow-500/5' },
                     ].map((sec, i) => (
                       <div key={i} className="bg-[#080d16]/80 border border-[#25a5ff]/15 p-5 rounded-2xl shadow-xl flex flex-col justify-between min-h-[260px]">
                         <div>
@@ -597,7 +615,14 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 <div className="bg-[#080d16]/80 border border-[#25a5ff]/15 p-6 rounded-3xl space-y-4 shadow-2xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 font-mono text-[9px] text-[#576575] font-bold uppercase tracking-widest pointer-events-none">MODEL: CLAUDE 3.5 SONNET</div>
-                  <h3 className="text-sm font-mono font-black uppercase tracking-widest text-[#25a5ff] flex items-center gap-2 border-b border-[#25a5ff]/10 pb-3"><Zap size={16}/> Synthetic Executive Security Brief</h3>
+                  <div className="flex justify-between items-center border-b border-[#25a5ff]/10 pb-3">
+                    <h3 className="text-sm font-mono font-black uppercase tracking-widest text-[#25a5ff] flex items-center gap-2"><Zap size={16}/> Synthetic Executive Security Brief</h3>
+                    {analysisResult && (
+                      <button onClick={() => handleDownloadPDF(analysisResult.id)} className="px-3 py-1.5 bg-[#0a1824] border border-emerald-500/30 text-[9px] font-mono font-bold uppercase rounded-lg cursor-pointer text-emerald-400 hover:text-white flex items-center gap-1.5 transition-all">
+                        <FileDown size={11} /> PDF Report
+                      </button>
+                    )}
+                  </div>
                   {analysisResult ? (
                     <div className="text-xs font-sans text-[#94a3b8] space-y-4 leading-relaxed whitespace-pre-line bg-black/30 p-5 rounded-2xl border border-white/5 max-h-[460px] overflow-y-auto custom-scrollbar">
                       {analysisResult.ai_generated_report ? (
