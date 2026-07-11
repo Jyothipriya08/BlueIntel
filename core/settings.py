@@ -53,7 +53,8 @@ SITE_ID = 1
 # --- MODERN ALLAUTH CONFIGURATION SCHEMATICS ---
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_LOGIN_METHODS = {'email'}
-ACCOUNT_SIGNUP_FIELDS = ['email', 'username']
+ACCOUNT_UNIQUE_EMAIL = True
+# Removed ACCOUNT_SIGNUP_FIELDS to eliminate configuration warnings/halts
 
 
 # --- MIDDLEWARE INTERCEPTORS ---
@@ -70,6 +71,7 @@ MIDDLEWARE = [
     
     # --- ALLAUTH AUTHENTICATION MIDDLEWARE LAYER ---
     'allauth.account.middleware.AccountMiddleware',
+    'core.middleware.DashboardAccessMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -96,11 +98,21 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # --- DATABASE STRUCTURING ---
 
 DATABASES = {
+    # Primary Storage: Handles your relational identity tables locally out of db.sqlite3
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+    },
+    # Secondary Storage: Acts as your local malware sandbox document repository out of db_sandbox.sqlite3
+    # Bypasses local background MongoDB connection dependencies to prevent system timeouts
+    'malware_sandbox_pool': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db_sandbox.sqlite3',
     }
 }
+
+# Automated router script to keep local database tables cleanly separated
+DATABASE_ROUTERS = ['core.db_routers.MalwareIntelRouter']
 
 
 # --- PASSWORD VALIDATION METRICS ---
@@ -156,17 +168,38 @@ SOCIALACCOUNT_PROVIDERS = {
         'AUTH_PARAMS': {
             'access_type': 'online',
         }
+    },
+    'facebook': {
+        'APP': {
+            'client_id': os.getenv('FACEBOOK_CLIENT_ID', ''),
+            'secret': os.getenv('FACEBOOK_CLIENT_SECRET', ''),
+            'key': ''
+        },
+        'SCOPE': [
+            'email',
+            'public_profile',
+        ],
+        'AUTH_PARAMS': {
+            'auth_type': 'rerequest',
+        }
     }
 }
 
+# --- BYPASS INTERMEDIATE OAUTH SCREENS ---
 SOCIALACCOUNT_LOGIN_ON_GET = True
 ACCOUNT_LOGOUT_ON_GET = True
+
 # --- OAUTH SUCCESS REDIRECT ROUTING ---
 LOGIN_REDIRECT_URL = 'http://localhost:5173/'
 LOGOUT_REDIRECT_URL = 'http://localhost:5173/'
 
 # Point to your isolated core/adapters.py file (prevents AppRegistryNotReady circular errors)
 SOCIALACCOUNT_ADAPTER = 'core.adapters.CustomSocialAccountAdapter'
-# --- BYPASS INTERMEDIATE OAUTH SCREENS ---
-SOCIALACCOUNT_LOGIN_ON_GET = True
-ACCOUNT_LOGOUT_ON_GET = True
+
+# --- REST FRAMEWORK GLOBAL CONFIGURATION MATRIX ---
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+}

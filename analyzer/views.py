@@ -13,6 +13,14 @@ from rest_framework import status
 from rest_framework.parsers import MultiPartParser
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login as auth_login
+from django.contrib import messages
+
+# DRF authentication and permission imports
+from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
+from rest_framework import permissions
 
 # Import the persistence data objects we just deployed
 from .models import ThreatAnalysisLog
@@ -24,6 +32,7 @@ def upload_page(request):
 @method_decorator(csrf_exempt, name='dispatch')
 class MalwareUploadView(APIView):
     parser_classes = [MultiPartParser]
+    permission_classes = [permissions.IsAuthenticated]
 
     def calculate_entropy(self, data):
         if not data: return 0.0
@@ -159,6 +168,7 @@ class MalwareUploadView(APIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AIThreatReportView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
     def post(self, request, format=None):
         analysis_data = request.data.get("analysis_results")
         user_query = request.data.get("query", None)
@@ -203,6 +213,8 @@ class AIThreatReportView(APIView):
 # NEW API NODE: Fetches all historical entries straight into the frontend ledger table layout
 @method_decorator(csrf_exempt, name='dispatch')
 class ScanHistoryLedgerView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request, format=None):
         logs = ThreatAnalysisLog.objects.all()[:15] # Grab trailing 15 events
         data_matrix = [{
@@ -213,3 +225,125 @@ class ScanHistoryLedgerView(APIView):
             "score": log.malware_classification.get('score', 0)
         } for log in logs]
         return Response(data_matrix, status=status.HTTP_200_OK)
+    
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard:home')
+        
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        
+        # Resolve username if email is used as primary identity
+        from django.contrib.auth.models import User
+        try:
+            user_obj = User.objects.get(email=email)
+            username = user_obj.username
+        except User.DoesNotExist:
+            messages.error(request, "User Not Found")
+            return render(request, 'auth/login.html')
+
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            if not user.is_active:
+                messages.error(request, "Account Not Verified")
+                return render(request, 'auth/login.html')
+            
+            # Successful authentication requirement
+            auth_login(request, user)
+            return redirect('dashboard:home')
+        else:
+            messages.error(request, "Incorrect Password")
+            return render(request, 'auth/login.html')
+            
+    return render(request, 'auth/login.html')
+
+
+# --- CLASS-BASED USER AUTHENTICATION API ENDPOINTS ---
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UserSignupView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, format=None):
+        email = request.data.get('email')
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        if not email or not password:
+            return Response({"error": "Email and password are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate a username from email if not specified
+        if not username:
+            username = email.split('@')[0]
+            # Ensure unique username
+            base_username = username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+
+        if User.objects.filter(email=email).exists():
+            return Response({"error": "A user with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.create_user(username=username, email=email, password=password)
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({
+                "token": token.key,
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email
+                }
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UserLoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, format=None):
+        email = request.data.get('email')
+        password = request.data.get('password')
+
+        if not email or not password:
+            return Response({"error": "Email and password are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user_obj = User.objects.get(email=email)
+            username = user_obj.username
+        except User.DoesNotExist:
+            return Response({"error": "Invalid credentials. User does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = authenticate(username=username, password=password)
+        if user is not None:
+            if not user.is_active:
+                return Response({"error": "Account is disabled."}, status=status.HTTP_403_FORBIDDEN)
+            
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({
+                "token": token.key,
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email
+                }
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Invalid credentials. Incorrect password."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UserLogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, format=None):
+        try:
+            request.user.auth_token.delete()
+            return Response({"message": "Successfully logged out."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
