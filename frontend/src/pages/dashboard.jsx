@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
+const API_BASE = `http://${window.location.hostname}:8000`;
+
 export default function Dashboard() {
   const navigate = useNavigate();
   
@@ -62,7 +64,7 @@ export default function Dashboard() {
   // Fetch functions
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/dashboard-stats/');
+      const res = await fetch(`${API_BASE}/api/v1/dashboard-stats/`);
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -74,7 +76,7 @@ export default function Dashboard() {
 
   const fetchHistoryLedger = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/history-ledger/');
+      const res = await fetch(`${API_BASE}/api/v1/history-ledger/`);
       if (res.ok) {
         const data = await res.json();
         setScanHistory(data);
@@ -86,7 +88,7 @@ export default function Dashboard() {
 
   const fetchThreatFeeds = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/threat-intelligence/');
+      const res = await fetch(`${API_BASE}/api/v1/threat-intelligence/`);
       if (res.ok) {
         const data = await res.json();
         setThreatFeeds(data);
@@ -98,7 +100,7 @@ export default function Dashboard() {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/notifications/');
+      const res = await fetch(`${API_BASE}/api/v1/notifications/`);
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
@@ -116,7 +118,7 @@ export default function Dashboard() {
     fetchThreatFeeds();
     fetchNotifications();
 
-    const sse = new EventSource('http://127.0.0.1:8000/api/v1/telemetry-stream/');
+    const sse = new EventSource(`${API_BASE}/api/v1/telemetry-stream/`);
 
     sse.onmessage = (event) => {
       try {
@@ -188,7 +190,7 @@ export default function Dashboard() {
     }
     setIsSearching(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/global-search/?q=${encodeURIComponent(globalSearchQuery)}`);
+      const res = await fetch(`${API_BASE}/api/v1/global-search/?q=${encodeURIComponent(globalSearchQuery)}`);
       if (res.ok) {
         const data = await res.json();
         setGlobalSearchResults(data);
@@ -275,7 +277,7 @@ export default function Dashboard() {
     formData.append('file', file);
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/upload/', {
+      const res = await fetch(`${API_BASE}/api/v1/upload/`, {
         method: 'POST',
         body: formData
       });
@@ -319,7 +321,7 @@ export default function Dashboard() {
   // Open detailed analysis report
   const openAnalysisDetails = async (logId) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/scan-status/${logId}/`);
+      const res = await fetch(`${API_BASE}/api/v1/scan-status/${logId}/`);
       if (res.ok) {
         const data = await res.json();
         setSelectedAnalysis(data);
@@ -339,7 +341,7 @@ export default function Dashboard() {
   const handleHistoryDelete = async (logId) => {
     try {
       // Backend does not enforce strict user delete for standalone development, so we can clean local rows
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/history-ledger/`, {
+      const res = await fetch(`${API_BASE}/api/v1/history-ledger/`, {
         method: 'POST', // standard endpoint routing fallback if DELETE isn't mapped
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', id: logId })
@@ -370,7 +372,7 @@ export default function Dashboard() {
     ]);
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/ai-report/', {
+      const res = await fetch(`${API_BASE}/api/v1/ai-report/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -420,7 +422,7 @@ export default function Dashboard() {
     setAiReportChat(prev => [...prev, { role: 'user', text: `Triggering action: ${command}` }]);
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/ai-report/', {
+      const res = await fetch(`${API_BASE}/api/v1/ai-report/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -457,12 +459,12 @@ export default function Dashboard() {
   };
 
   const handleDownloadPDF = (logId) => {
-    window.open(`http://127.0.0.1:8000/api/v1/reports/${logId}/download/`, '_blank');
+    window.open(`${API_BASE}/api/v1/reports/${logId}/download/`, '_blank');
   };
 
   const handleDismissNotification = async (id) => {
     try {
-      await fetch('http://127.0.0.1:8000/api/v1/notifications/', {
+      await fetch(`${API_BASE}/api/v1/notifications/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id })
@@ -475,7 +477,7 @@ export default function Dashboard() {
 
   const handleClearAllNotifications = async () => {
     try {
-      await fetch('http://127.0.0.1:8000/api/v1/notifications/', {
+      await fetch(`${API_BASE}/api/v1/notifications/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({})
@@ -1453,7 +1455,7 @@ function WorldThreatGlobe() {
     ]);
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/ai-report/', {
+      const res = await fetch(`${API_BASE}/api/v1/ai-report/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

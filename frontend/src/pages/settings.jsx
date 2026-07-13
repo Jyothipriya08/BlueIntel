@@ -20,11 +20,12 @@ export default function Settings() {
 
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
+  const API_BASE = `http://${window.location.hostname}:8000`;
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/v1/settings/');
+        const response = await fetch(`${API_BASE}/api/v1/settings/`);
         if (response.ok) {
           const data = await response.json();
           setTheme(data.theme);
@@ -39,7 +40,7 @@ export default function Settings() {
       }
     };
     fetchSettings();
-  }, []);
+  }, [API_BASE]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,7 +56,7 @@ export default function Settings() {
     if (claudeKey.trim()) payload.claude_key = claudeKey;
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/v1/settings/', {
+      const response = await fetch(`${API_BASE}/api/v1/settings/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

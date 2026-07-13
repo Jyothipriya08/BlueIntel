@@ -36,7 +36,7 @@ export default function Landing() {
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-[#060b13]/80 backdrop-blur-xl border-b border-[#25a5ff]/15 py-4' : 'bg-transparent py-6'}`}>
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center space-x-3">
-            <Shield className="text-[#25a5ff] h-6 w-6" />
+            <img src="/logo.png" className="h-8 w-auto rounded shadow-[0_0_15px_rgba(37,165,255,0.2)]" alt="BlueIntel Logo" />
             <span className="font-black text-xl tracking-widest uppercase">BLUE<span className="text-[#25a5ff]">INTEL</span></span>
           </div>
           <div className="hidden md:flex space-x-8 font-mono text-xs uppercase tracking-wider text-[#576575]">
