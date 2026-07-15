@@ -1,0 +1,532 @@
+
+[DATABASE MONITOR] 2026-07-15 21:43:21.124
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0196s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:21.141
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0095s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:21.163
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0613s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:21.185
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0068s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:21.199
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0050s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:23.535
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0078s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:23.564
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0418s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:23.573
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0107s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:23.629
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0163s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:23.791
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0042s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:31.726
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0300s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:31.729
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0214s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:31.780
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0172s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:31.781
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0127s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:43:31.974
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0046s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:46:50.640
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0151s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:46:50.647
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0166s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:46:50.673
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0160s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:46:50.688
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0193s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:46:50.878
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0036s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:50:21.389
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0120s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:50:21.394
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0280s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:50:21.471
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0093s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:50:21.472
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0220s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 21:50:21.716
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0044s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:01:00.762
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0194s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:01:00.774
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0247s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:01:00.809
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0283s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:01:00.823
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0253s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:01:00.836
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0108s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:02:43.231
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0520s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:02:43.236
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0646s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:02:43.275
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0069s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:02:43.293
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0132s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:02:43.430
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0054s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:20:53.328
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0128s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:20:53.381
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0193s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:20:53.382
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0506s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:20:53.416
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0082s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:20:54.314
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0061s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:31:52.551
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0201s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:31:52.565
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0230s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:31:52.587
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0115s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:31:52.613
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0212s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:31:53.754
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0059s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:33:49.959
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0044s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:33:50.002
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0083s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:33:50.041
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0045s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:33:50.079
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0095s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:33:50.185
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0046s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:42:45.131
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0245s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:42:45.146
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0367s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:42:45.169
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0155s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:42:45.185
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0184s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 22:42:45.194
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0071s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:02:17.055
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0210s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:02:17.116
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0190s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:02:17.138
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0801s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:02:17.185
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0182s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:02:17.638
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0062s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:03:59.403
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0227s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:03:59.425
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0497s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:04:00.020
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0046s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:08:48.044
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0305s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:08:48.069
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0511s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:08:48.112
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0237s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:08:48.134
+  USER ACTION: FETCH_USER_ACTIVITIES
+  TABLE/COLLECTION: UserActivityLog
+  EXECUTION TIME: 0.0364s
+  DATABASE RESPONSE: Fetched 3 audit logs.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:08:48.145
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0087s
+  DATABASE RESPONSE: Fetched 1 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:12:21.155
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0039s
+  DATABASE RESPONSE: Fetched 0 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:12:25.488
+  USER ACTION: SEARCH_SCAN_HISTORY: query=''
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0047s
+  DATABASE RESPONSE: Fetched 0 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:12:28.788
+  USER ACTION: SEARCH_SCAN_HISTORY: query='jyo'
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0064s
+  DATABASE RESPONSE: Fetched 0 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:12:29.371
+  USER ACTION: SEARCH_SCAN_HISTORY: query='jyot'
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0046s
+  DATABASE RESPONSE: Fetched 0 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:12:29.803
+  USER ACTION: SEARCH_SCAN_HISTORY: query='jyothi'
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0056s
+  DATABASE RESPONSE: Fetched 0 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:12:33.369
+  USER ACTION: SEARCH_SCAN_HISTORY: query='jyothi'
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0057s
+  DATABASE RESPONSE: Fetched 0 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:12:36.311
+  USER ACTION: SEARCH_SCAN_HISTORY: query='jyothi'
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0060s
+  DATABASE RESPONSE: Fetched 0 records.
+============================================================
+
+[DATABASE MONITOR] 2026-07-15 23:12:39.339
+  USER ACTION: SEARCH_SCAN_HISTORY: query='jyothi'
+  TABLE/COLLECTION: ThreatAnalysisLog
+  EXECUTION TIME: 0.0056s
+  DATABASE RESPONSE: Fetched 0 records.
+============================================================

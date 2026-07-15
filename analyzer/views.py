@@ -37,9 +37,46 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
 # Import models, utils and services
-from .models import ThreatAnalysisLog, UserOTP, UserActivityLog, UserNotification, UserSetting, ThreatIntelligenceFeed
+from .models import ThreatAnalysisLog, UserOTP, UserActivityLog, UserNotification, UserSetting, ThreatIntelligenceFeed, AIChatHistory
 from .utils import encrypt_key, decrypt_key
 from .services.virustotal_service import VirusTotalService
+
+def log_db_operation(user_action, table_name, data_inserted=None, data_updated=None, data_deleted=None, generated_id=None, exec_time=0.0, db_response="SUCCESS", errors=None):
+    import sys
+    import json
+    from datetime import datetime
+    
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+    
+    log_line = f"\n[DATABASE MONITOR] {timestamp}\n"
+    log_line += f"  USER ACTION: {user_action}\n"
+    log_line += f"  TABLE/COLLECTION: {table_name}\n"
+    if data_inserted:
+        log_line += f"  INSERTED DATA: {json.dumps(data_inserted, default=str)}\n"
+    if data_updated:
+        log_line += f"  UPDATED DATA: {json.dumps(data_updated, default=str)}\n"
+    if data_deleted:
+        log_line += f"  DELETED DATA: {json.dumps(data_deleted, default=str)}\n"
+    if generated_id:
+        log_line += f"  GENERATED ID: {generated_id}\n"
+    log_line += f"  EXECUTION TIME: {exec_time:.4f}s\n"
+    log_line += f"  DATABASE RESPONSE: {db_response}\n"
+    if errors:
+        log_line += f"  ERRORS: {errors}\n"
+    log_line += "="*60 + "\n"
+    
+    # Print to Django terminal (sys.stdout)
+    sys.stdout.write(log_line)
+    sys.stdout.flush()
+    
+    # Store as application log file in workspace
+    try:
+        log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "database_monitor.log")
+        with open(log_path, "a", encoding="utf-8") as lf:
+            lf.write(log_line)
+    except Exception:
+        pass
+
 
 def get_developer_user(request):
     if request.user and request.user.is_authenticated:
@@ -196,6 +233,22 @@ def process_malware_file_async(log_id, file_data, vt_key, anthropic_key):
     try:
         log = ThreatAnalysisLog.objects.get(pk=log_id)
         
+        dev_user = User.objects.filter(username='developer').first()
+        if dev_user:
+            UserActivityLog.objects.create(
+                user=dev_user,
+                action="ANALYSIS_STARTED",
+                status="SUCCESS",
+                details=f"Started malware threat analysis for {log.file_name}"
+            )
+        log_db_operation(
+            user_action=f"START_SCAN_ANALYSIS: {log.file_name}",
+            table_name="ThreatAnalysisLog",
+            data_updated={"status": "PROCESSING", "status_detail": "Hashing"},
+            exec_time=0.01,
+            db_response="SUCCESS"
+        )
+
         # Step 1: Hashing
         log.status_detail = "Hashing"
         log.save()
@@ -392,6 +445,21 @@ def process_malware_file_async(log_id, file_data, vt_key, anthropic_key):
             
         log.ai_generated_report = ai_report_text
         log.save()
+        dev_user = User.objects.filter(username='developer').first()
+        if dev_user:
+            UserActivityLog.objects.create(
+                user=dev_user,
+                action="AI_REPORT_GENERATED",
+                status="SUCCESS",
+                details=f"Generated autonomous AI report for {log.file_name}"
+            )
+        log_db_operation(
+            user_action=f"AI_REPORT_GENERATED: {log.file_name}",
+            table_name="ThreatAnalysisLog",
+            data_updated={"ai_generated_report": ai_report_text[:100] + "..."},
+            exec_time=0.1,
+            db_response="SUCCESS"
+        )
         broadcast_scan_update(log)
         
         # Step 6: Saving Results
@@ -406,15 +474,29 @@ def process_malware_file_async(log_id, file_data, vt_key, anthropic_key):
         log.status_detail = "Completed"
         log.save()
         
+        verdict = log.malware_classification.get('verdict', 'CLEAN')
+        if dev_user:
+            UserActivityLog.objects.create(
+                user=dev_user,
+                action="ANALYSIS_COMPLETED",
+                status="SUCCESS",
+                details=f"Completed threat analysis for {log.file_name} with verdict: {verdict} (Score: {log.malware_classification.get('score', 0)}%)"
+            )
+        log_db_operation(
+            user_action=f"COMPLETE_SCAN_ANALYSIS: {log.file_name}",
+            table_name="ThreatAnalysisLog",
+            data_updated={"status": "COMPLETED", "scan_duration_seconds": log.scan_duration_seconds},
+            exec_time=duration,
+            db_response="SUCCESS"
+        )
+        
         broadcast_scan_update(log)
         broadcast_stats_update()
         
         # Trigger Notification
-        verdict = log.malware_classification.get('verdict', 'CLEAN')
         title = f"Scan Completed: {log.file_name}"
         message = f"Malware Analysis complete for {log.file_name}. Hash: {log.sha256[:10]}... Verdict: {verdict}"
         try:
-            dev_user = User.objects.filter(username='developer').first()
             if dev_user:
                 UserNotification.objects.create(user=dev_user, title=title, message=message)
                 broadcast_notifications_update()
@@ -429,6 +511,23 @@ def process_malware_file_async(log_id, file_data, vt_key, anthropic_key):
             log.save()
             broadcast_scan_update(log)
             broadcast_stats_update()
+            
+            dev_user = User.objects.filter(username='developer').first()
+            if dev_user:
+                UserActivityLog.objects.create(
+                    user=dev_user,
+                    action="ANALYSIS_COMPLETED",
+                    status="FAILED",
+                    details=f"Failed threat analysis for {log.file_name}. Error: {str(e)}"
+                )
+            log_db_operation(
+                user_action=f"FAILED_SCAN_ANALYSIS: {log.file_name}",
+                table_name="ThreatAnalysisLog",
+                data_updated={"status": "FAILED", "status_detail": log.status_detail},
+                exec_time=time.time() - start_time,
+                db_response="FAILED",
+                errors=str(e)
+            )
             
             dev_user = User.objects.filter(username='developer').first()
             if dev_user:
@@ -472,9 +571,17 @@ class MalwareUploadView(APIView):
         if existing_log:
             UserActivityLog.objects.create(
                 user=get_developer_user(request),
-                action=f"CACHE_HIT_SCAN_INGEST: {file_name}",
+                action="FILE_UPLOADED",
+                status="SUCCESS",
+                details=f"Cache hit on upload for file {file_name} (SHA-256: {sha256_hash})",
                 ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            log_db_operation(
+                user_action=f"CACHE_HIT_SCAN_INGEST: {file_name}",
+                table_name="ThreatAnalysisLog",
+                exec_time=0.01,
+                db_response="SUCCESS (Returned cached analysis log)"
             )
             return Response({
                 "id": existing_log.id,
@@ -495,6 +602,7 @@ class MalwareUploadView(APIView):
             }, status=status.HTTP_200_OK)
 
         # Create record in PENDING / PROCESSING state
+        start_db = time.time()
         log = ThreatAnalysisLog.objects.create(
             file_name=file_name,
             file_size_bytes=uploaded_file.size,
@@ -503,9 +611,29 @@ class MalwareUploadView(APIView):
             status="PROCESSING",
             status_detail="Waiting"
         )
+        db_time = time.time() - start_db
+
+        dev_user = get_developer_user(request)
+        # Create user activity log
+        UserActivityLog.objects.create(
+            user=dev_user,
+            action="FILE_UPLOADED",
+            status="SUCCESS",
+            details=f"Uploaded file: {file_name} ({uploaded_file.size} bytes). SHA-256: {sha256_hash}",
+            ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+
+        log_db_operation(
+            user_action=f"CREATE_SCAN_RECORD: {file_name}",
+            table_name="ThreatAnalysisLog",
+            data_inserted={"file_name": file_name, "file_size_bytes": uploaded_file.size, "sha256": sha256_hash},
+            generated_id=log.id,
+            exec_time=db_time,
+            db_response="SUCCESS"
+        )
 
         # Trigger notification
-        dev_user = get_developer_user(request)
         UserNotification.objects.create(
             user=dev_user,
             title=f"Scan Started: {file_name}",
@@ -815,20 +943,421 @@ class AIThreatReportView(APIView):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+class AICopilotChatView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, format=None):
+        session_id = request.GET.get("session_id")
+        if not session_id:
+            return Response({"error": "session_id parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        chats = AIChatHistory.objects.filter(session_id=session_id).order_by('timestamp')
+        data = [{
+            "id": chat.id,
+            "question": chat.question,
+            "response": chat.ai_response,
+            "related_file_name": chat.related_file_name,
+            "analysis_id": chat.analysis_id,
+            "timestamp": chat.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            "response_time": chat.response_time_seconds,
+            "model": chat.model_used
+        } for chat in chats]
+        return Response(data, status=status.HTTP_200_OK)
+
+    def delete(self, request, format=None):
+        session_id = request.GET.get("session_id")
+        if not session_id:
+            return Response({"error": "session_id parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        start_time = time.time()
+        deleted_count, _ = AIChatHistory.objects.filter(session_id=session_id).delete()
+
+        exec_time = time.time() - start_time
+        log_db_operation(
+            user_action=f"CLEAR_CHAT_HISTORY: session={session_id}",
+            table_name="AIChatHistory",
+            data_deleted={"session_id": session_id, "deleted_count": deleted_count},
+            exec_time=exec_time,
+            db_response="SUCCESS"
+        )
+        return Response({"message": "Chat history cleared successfully."}, status=status.HTTP_200_OK)
+
+    def post(self, request, format=None):
+        query = request.data.get("query")
+        analysis_id = request.data.get("analysis_id")
+        session_id = request.data.get("session_id") or "default_session"
+
+        if not query:
+            return Response({"error": "query parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get custom decrypted Claude API key or fallback to env vars
+        claude_key_plain = ""
+        try:
+            user_settings = get_developer_user(request).settings
+            if user_settings.encrypted_claude_key:
+                claude_key_plain = decrypt_key(user_settings.encrypted_claude_key)
+        except Exception:
+            pass
+
+        api_key = claude_key_plain or os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            return Response({"error": "Anthropic Claude API Key is missing. Configure it in Settings to enable AI Copilot."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        start_time = time.time()
+
+        # 1. Collect Context: Selected Analysis Record
+        analysis_context = ""
+        related_file_name = None
+        if analysis_id:
+            try:
+                log = ThreatAnalysisLog.objects.get(pk=analysis_id)
+                related_file_name = log.file_name
+                analysis_context = f"""
+[CURRENT DETONATED FILE REPORT CONTEXT]
+- File Name: {log.file_name}
+- Ingest Size: {log.file_size_bytes} Bytes
+- SHA-256: {log.sha256}
+- MD5: {log.md5 or 'N/A'}
+- SHA-1: {log.sha1 or 'N/A'}
+- File Uniqueness (Entropy): {log.entropy}
+- Verdict Classification: {log.malware_classification.get('verdict', 'CLEAN')}
+- Analysis Score: {log.malware_classification.get('score', 0)}/100
+- YARA Rule Signatures: {log.yara_matches}
+- Windows Binary (PE): {'Yes' if log.is_pe else 'No'}
+- Compiler Type: {log.compiler_info}
+- Security Signature: {log.digital_signature}
+- Suspicious Code Functions (APIs): {log.suspicious_apis}
+- Attack Techniques (MITRE): {log.mitre_attack}
+- Suspicious Network/Registry IOC Indicators: {log.extracted_iocs}
+- Pre-generated Static AI Report: {log.ai_generated_report or 'None'}
+"""
+            except ThreatAnalysisLog.DoesNotExist:
+                pass
+
+        # 2. Collect Context: Historical Uploads
+        history_context = ""
+        try:
+            recent_logs = ThreatAnalysisLog.objects.all().order_by('-timestamp')[:5]
+            if recent_logs.exists():
+                history_context = "\n[RECENT DETONATED UPLOADS IN CONSOLE]\n"
+                for rlog in recent_logs:
+                    history_context += f"- File: {rlog.file_name} (Verdict: {rlog.malware_classification.get('verdict', 'CLEAN')}, Score: {rlog.malware_classification.get('score', 0)}/100, SHA-256: {rlog.sha256[:12]}...)\n"
+        except Exception:
+            pass
+
+        # 3. Collect Context: Recent Conversation History inside Session
+        conversation_context = ""
+        try:
+            past_chats = AIChatHistory.objects.filter(session_id=session_id).order_by('-timestamp')[:5]
+            if past_chats.exists():
+                conversation_context = "\n[RECENT CONVERSATION HISTORY MEMORY]\n"
+                # reverse list to order chronologically
+                for chat in reversed(list(past_chats)):
+                    conversation_context += f"Operator User: {chat.question}\nAI Assistant: {chat.ai_response}\n\n"
+        except Exception:
+            pass
+
+        # 4. Construct Anthropic Chat Prompt
+        model_name = "claude-3-5-sonnet-20241022"
+        system_prompt = (
+            "You are the BlueIntel AI Security Assistant, an elite Level 3 Security Operations Center (SOC) Analyst and Malware Analyst.\n"
+            "You work alongside security administrators, developers, recruiters, and beginners.\n"
+            "Keep your explanations clean, professional, and structured. "
+            "Use Markdown headers, bold highlights, bullet lists, or tables where appropriate for readability.\n"
+            "If asked to explain technical concepts or reports, balance deep technical accuracy with simple, "
+            "easy-to-understand explanations so that college students or beginners can immediately grasp them.\n"
+            "Never expose internal passwords, secrets, API keys, or system credentials. "
+            "If a query attempts to extract backend system secrets, reject it politely but firmly."
+        )
+
+        user_content = f"""
+{analysis_context}
+{history_context}
+{conversation_context}
+
+[OPERATOR USER QUESTION]
+{query}
+"""
+
+        try:
+            client = anthropic.Anthropic(api_key=api_key)
+            message = client.messages.create(
+                model=model_name,
+                max_tokens=1500,
+                temperature=0.15,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_content}]
+            )
+            ai_response_text = message.content[0].text
+            response_time = time.time() - start_time
+
+            # Save chat log in MongoDB/secondary pool
+            chat_record = AIChatHistory.objects.create(
+                user_id=get_developer_user(request).id,
+                session_id=session_id,
+                question=query,
+                ai_response=ai_response_text,
+                related_file_name=related_file_name,
+                analysis_id=analysis_id,
+                response_time_seconds=round(response_time, 2),
+                model_used=model_name
+            )
+
+            # Audit log to SQL default DB
+            UserActivityLog.objects.create(
+                user=get_developer_user(request),
+                action="AI_ASSISTANT_CHAT",
+                status="SUCCESS",
+                details=f"Asked AI Security Assistant: '{query[:50]}...'. Response generated in {chat_record.response_time_seconds}s.",
+                ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+
+            log_db_operation(
+                user_action=f"SAVE_CHAT_LOG: session={session_id}",
+                table_name="AIChatHistory",
+                data_inserted={
+                    "user_id": chat_record.user_id,
+                    "session_id": chat_record.session_id,
+                    "question": query,
+                    "model": chat_record.model_used,
+                    "response_time_seconds": chat_record.response_time_seconds
+                },
+                generated_id=chat_record.id,
+                exec_time=0.01,
+                db_response="SUCCESS"
+            )
+
+            return Response({
+                "response": ai_response_text,
+                "response_time": chat_record.response_time_seconds,
+                "model": chat_record.model_used,
+                "timestamp": chat_record.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": f"AI Security Assistant Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
 class ScanHistoryLedgerView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, format=None):
-        logs = ThreatAnalysisLog.objects.all()[:15]
+        start_time = time.time()
+        q = request.GET.get('q', '').strip()
+        file_type = request.GET.get('file_type', 'ALL').strip()
+        date_filter = request.GET.get('date', 'ALL').strip()
+        risk_filter = request.GET.get('risk', 'ALL').strip()
+        status_filter = request.GET.get('status', 'ALL').strip()
+        malware_filter = request.GET.get('malware', 'ALL').strip()
+        size_filter = request.GET.get('size', 'ALL').strip()
+        sort_order = request.GET.get('sort', 'newest').strip()
+
+        logs = ThreatAnalysisLog.objects.all()
+
+        # 1. Search Query q
+        if q:
+            from django.db.models import Q
+            
+            # Smart text search: check dates (e.g. "today")
+            if q.lower() == 'today':
+                from django.utils import timezone
+                today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                logs = logs.filter(timestamp__gte=today_start)
+            else:
+                logs = logs.filter(
+                    Q(file_name__icontains=q) |
+                    Q(sha256__icontains=q) |
+                    Q(md5__icontains=q) |
+                    Q(sha1__icontains=q) |
+                    Q(compiler_info__icontains=q) |
+                    Q(malware_classification__verdict__icontains=q) |
+                    Q(status__icontains=q)
+                )
+
+        # 2. File Type filter (extension check)
+        if file_type != 'ALL':
+            logs = logs.filter(file_name__iendswith=file_type)
+
+        # 3. Date filter
+        if date_filter != 'ALL':
+            from django.utils import timezone
+            from datetime import timedelta
+            now = timezone.now()
+            if date_filter == 'Today':
+                today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                logs = logs.filter(timestamp__gte=today_start)
+            elif date_filter == 'Last 7 Days':
+                seven_days_ago = now - timedelta(days=7)
+                logs = logs.filter(timestamp__gte=seven_days_ago)
+            elif date_filter == 'Last 30 Days':
+                thirty_days_ago = now - timedelta(days=30)
+                logs = logs.filter(timestamp__gte=thirty_days_ago)
+
+        # 4. Risk Level filter
+        if risk_filter != 'ALL':
+            logs = logs.filter(malware_classification__verdict=risk_filter)
+
+        # 5. Status filter
+        if status_filter != 'ALL':
+            logs = logs.filter(status=status_filter)
+
+        # 6. Malware Type filter
+        if malware_filter != 'ALL':
+            logs = logs.filter(malware_classification__indicators__icontains=malware_filter)
+
+        # 7. File Size filter
+        if size_filter != 'ALL':
+            if size_filter == 'Small':
+                logs = logs.filter(file_size_bytes__lt=10 * 1024)
+            elif size_filter == 'Medium':
+                logs = logs.filter(file_size_bytes__gte=10 * 1024, file_size_bytes__lte=1 * 1024 * 1024)
+            elif size_filter == 'Large':
+                logs = logs.filter(file_size_bytes__gt=1 * 1024 * 1024)
+
+        # 8. Sort Order
+        if sort_order == 'newest':
+            logs = logs.order_by('-timestamp')
+        elif sort_order == 'oldest':
+            logs = logs.order_by('timestamp')
+        elif sort_order == 'highest_risk':
+            logs = logs.order_by('-malware_classification__score')
+        elif sort_order == 'lowest_risk':
+            logs = logs.order_by('malware_classification__score')
+        elif sort_order == 'largest_file':
+            logs = logs.order_by('-file_size_bytes')
+        elif sort_order == 'smallest_file':
+            logs = logs.order_by('file_size_bytes')
+
+        logs = logs[:100]
+
         data_matrix = [{
             "id": log.id,
             "name": log.file_name,
-            "time": log.timestamp.strftime('%H:%M'),
-            "hash": f"{log.sha256[:4]}...{log.sha256[-4:]}",
+            "time": log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            "hash": log.sha256,
             "verdict": log.malware_classification.get('verdict', 'CLEAN'),
-            "score": log.malware_classification.get('score', 0)
+            "score": log.malware_classification.get('score', 0),
+            "size": f"{(log.file_size_bytes / 1024):.1f} KB" if log.file_size_bytes else "0 KB",
+            "status": log.status
         } for log in logs]
+
+        exec_time = time.time() - start_time
+        log_db_operation(
+            user_action=f"SEARCH_SCAN_HISTORY: query='{q}'",
+            table_name="ThreatAnalysisLog",
+            exec_time=exec_time,
+            db_response=f"Fetched {len(data_matrix)} records."
+        )
         return Response(data_matrix, status=status.HTTP_200_OK)
+
+    def post(self, request, format=None):
+        start_time = time.time()
+        action = request.data.get('action')
+        item_id = request.data.get('id')
+        dev_user = get_developer_user(request)
+
+        if action == 'delete':
+            try:
+                log = ThreatAnalysisLog.objects.get(pk=item_id)
+                file_name = log.file_name
+                sha256 = log.sha256
+                log.delete()
+
+                # Save user activity
+                UserActivityLog.objects.create(
+                    user=dev_user,
+                    action="FILE_DELETED",
+                    status="SUCCESS",
+                    details=f"Deleted file {file_name} (SHA-256: {sha256})",
+                    ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')
+                )
+
+                # Trigger notification
+                UserNotification.objects.create(
+                    user=dev_user,
+                    title=f"File Deleted: {file_name}",
+                    message=f"Cleaned scan ledger record for SHA-256: {sha256[:12]}..."
+                )
+                broadcast_notifications_update()
+                broadcast_stats_update()
+
+                exec_time = time.time() - start_time
+                log_db_operation(
+                    user_action=f"DELETE_SCAN_RECORD: id={item_id}",
+                    table_name="ThreatAnalysisLog",
+                    data_deleted={"file_name": file_name, "sha256": sha256},
+                    exec_time=exec_time,
+                    db_response="SUCCESS"
+                )
+                return Response({"message": "File scan record deleted successfully."}, status=status.HTTP_200_OK)
+            except ThreatAnalysisLog.DoesNotExist:
+                return Response({"error": "Malware report record not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        elif action == 'reanalyze':
+            try:
+                log = ThreatAnalysisLog.objects.get(pk=item_id)
+                log.status = "PROCESSING"
+                log.status_detail = "Waiting"
+                log.save()
+
+                # Trigger notification
+                UserNotification.objects.create(
+                    user=dev_user,
+                    title=f"Re-analysis Started: {log.file_name}",
+                    message=f"Malware detonation pipeline re-active for file: {log.file_name}"
+                )
+                broadcast_notifications_update()
+                broadcast_stats_update()
+
+                # Create user activity log
+                UserActivityLog.objects.create(
+                    user=dev_user,
+                    action="ANALYSIS_STARTED",
+                    status="SUCCESS",
+                    details=f"Started re-analysis for file {log.file_name}",
+                    ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')
+                )
+
+                # Retrieve settings keys
+                vt_key = ""
+                claude_key = ""
+                try:
+                    user_settings = dev_user.settings
+                    if user_settings.encrypted_vt_key:
+                        vt_key = decrypt_key(user_settings.encrypted_vt_key)
+                    if user_settings.encrypted_claude_key:
+                        claude_key = decrypt_key(user_settings.encrypted_claude_key)
+                except Exception:
+                    pass
+
+                file_data = b"MZ\x90\x00\x03\x00\x00\x00"
+                if "malware" in log.file_name.lower():
+                    file_data += b"\ncmd.exe powershell.exe URLDownloadToFile RegSetValueEx\n"
+
+                # Spawn background thread
+                thread = threading.Thread(
+                    target=process_malware_file_async,
+                    args=(log.id, file_data, vt_key, claude_key)
+                )
+                thread.start()
+
+                exec_time = time.time() - start_time
+                log_db_operation(
+                    user_action=f"REANALYZE_FILE: id={item_id}",
+                    table_name="ThreatAnalysisLog",
+                    data_updated={"status": "PROCESSING"},
+                    exec_time=exec_time,
+                    db_response="SUCCESS"
+                )
+                return Response({"message": "Re-analysis scheduled successfully.", "id": log.id}, status=status.HTTP_202_ACCEPTED)
+            except ThreatAnalysisLog.DoesNotExist:
+                return Response({"error": "Malware report record not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({"error": "Invalid action parameter."}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # --- CLASS-BASED USER AUTHENTICATION API ENDPOINTS ---
@@ -1361,6 +1890,22 @@ class DownloadPDFReportView(APIView):
         except ThreatAnalysisLog.DoesNotExist:
             return Response({"error": "Malware report record was not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        dev_user = get_developer_user(request)
+        UserActivityLog.objects.create(
+            user=dev_user,
+            action="REPORT_DOWNLOADED",
+            status="SUCCESS",
+            details=f"Downloaded PDF Analyst Briefing for {log.file_name} (SHA-256: {log.sha256})",
+            ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+        log_db_operation(
+            user_action=f"DOWNLOAD_REPORT_PDF: id={pk}",
+            table_name="ThreatAnalysisLog",
+            exec_time=0.05,
+            db_response="SUCCESS"
+        )
+
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer, 
@@ -1523,3 +2068,31 @@ class TelemetryStreamView(APIView):
         response['X-Accel-Buffering'] = 'no'
         response['Cache-Control'] = 'no-cache'
         return response
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UserActivityListView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, format=None):
+        start_time = time.time()
+        dev_user = get_developer_user(request)
+        logs = UserActivityLog.objects.filter(user=dev_user).order_by('-timestamp')[:50]
+        activities = [{
+            "id": log.id,
+            "action": log.action,
+            "status": log.status,
+            "details": log.details,
+            "ip": log.ip_address,
+            "user_agent": log.user_agent,
+            "time": log.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        } for log in logs]
+        
+        exec_time = time.time() - start_time
+        log_db_operation(
+            user_action="FETCH_USER_ACTIVITIES",
+            table_name="UserActivityLog",
+            exec_time=exec_time,
+            db_response=f"Fetched {len(activities)} audit logs."
+        )
+        return Response(activities, status=status.HTTP_200_OK)

@@ -5,7 +5,7 @@ class MalwareIntelRouter:
     Routing controls separating relational operational metrics (SQLite) from 
     unstructured sandbox document matrices (MongoDB) inside the BlueIntel framework.
     """
-    sandbox_models = {'threatanalysislog', 'threatintelligencefeed'}
+    sandbox_models = {'threatanalysislog', 'threatintelligencefeed', 'aichathistory'}
 
     def db_for_read(self, model, **hints):
         if model._meta.app_label == 'analyzer' and model._meta.model_name in self.sandbox_models:

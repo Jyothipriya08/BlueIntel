@@ -3,11 +3,134 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Shield, Terminal, Activity, FileText, Settings, UploadCloud, Trash2, 
   Search, RefreshCw, AlertTriangle, CheckCircle, Radio, Bell, ArrowRight, 
-  Plus, Eye, Download, FileCode, Server, Database, Compass, Globe, Key, Lock
+  Plus, Eye, Download, FileCode, Server, Database, Compass, Globe, Key, Lock, Clock
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const API_BASE = `http://${window.location.hostname}:8000`;
+
+const parseInlineStyles = (text) => {
+  if (!text) return '';
+  const boldParts = text.split(/(\*\*.*?\*\*)/g);
+  return boldParts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="text-white font-bold">{part.slice(2, -2)}</strong>;
+    }
+    const codeParts = part.split(/(`.*?`)/g);
+    return codeParts.map((subPart, j) => {
+      if (subPart.startsWith('`') && subPart.endsWith('`')) {
+        return <code key={j} className="bg-black/30 text-[#25a5ff] px-1.5 py-0.5 rounded font-mono text-[10px] border border-white/5">{subPart.slice(1, -1)}</code>;
+      }
+      return subPart;
+    });
+  });
+};
+
+const renderMarkdown = (text) => {
+  if (!text) return '';
+  const parts = text.split(/(```[\s\S]*?```)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith('```')) {
+      const match = part.match(/```(\w*)\n([\s\S]*?)```/);
+      const lang = match ? match[1] : '';
+      const code = match ? match[2] : part.slice(3, -3);
+      return (
+        <pre key={idx} className="bg-black/40 border border-white/10 rounded-xl p-4 my-3 font-mono text-[11px] text-[#25a5ff] overflow-x-auto whitespace-pre">
+          {lang && <span className="block text-[8px] text-[#576575] uppercase mb-1 font-bold">{lang}</span>}
+          <code>{code}</code>
+        </pre>
+      );
+    }
+    
+    const lines = part.split('\n');
+    let inList = false;
+    let listItems = [];
+    let inTable = false;
+    let tableRows = [];
+    const elements = [];
+
+    const flushList = (key) => {
+      if (listItems.length > 0) {
+        elements.push(
+          <ul key={`ul-${key}`} className="list-disc list-inside space-y-1 my-2 text-left pl-2">
+            {listItems}
+          </ul>
+        );
+        listItems = [];
+        inList = false;
+      }
+    };
+
+    const flushTable = (key) => {
+      if (tableRows.length > 0) {
+        const headers = tableRows[0];
+        const bodyRows = tableRows.slice(1);
+        elements.push(
+          <div key={`table-wrapper-${key}`} className="overflow-x-auto my-3 border border-white/10 rounded-xl">
+            <table className="w-full text-left font-sans text-xs">
+              <thead>
+                <tr className="bg-white/5 border-b border-white/10 text-white font-bold">
+                  {headers.map((h, i) => <th key={i} className="p-3">{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {bodyRows.map((row, rIdx) => (
+                  <tr key={rIdx} className="border-b border-white/5 hover:bg-white/5">
+                    {row.map((col, cIdx) => <td key={cIdx} className="p-3 text-[#9aa4b2]">{col}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+        tableRows = [];
+        inTable = false;
+      }
+    };
+
+    lines.forEach((line, lIdx) => {
+      const key = `${idx}-${lIdx}`;
+      if (line.startsWith('### ')) {
+        flushList(key);
+        flushTable(key);
+        elements.push(<h4 key={key} className="text-sm font-bold text-white mt-4 mb-2">{line.replace('### ', '')}</h4>);
+      } else if (line.startsWith('## ')) {
+        flushList(key);
+        flushTable(key);
+        elements.push(<h3 key={key} className="text-md font-bold text-white mt-5 mb-2">{line.replace('## ', '')}</h3>);
+      } else if (line.startsWith('# ')) {
+        flushList(key);
+        flushTable(key);
+        elements.push(<h2 key={key} className="text-lg font-bold text-[#25a5ff] mt-6 mb-3">{line.replace('# ', '')}</h2>);
+      } else if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
+        flushTable(key);
+        inList = true;
+        const textContent = line.replace(/^\s*[-*]\s+/, '');
+        listItems.push(<li key={key} className="text-[#9aa4b2] ml-2">{parseInlineStyles(textContent)}</li>);
+      } else if (line.includes('|')) {
+        flushList(key);
+        inTable = true;
+        const cols = line.split('|').map(c => c.trim()).filter((c, i, arr) => i > 0 && i < arr.length - 1);
+        if (cols.length > 0 && !cols.every(c => c.match(/^[-:]+$/))) {
+          tableRows.push(cols);
+        }
+      } else {
+        flushList(key);
+        flushTable(key);
+        if (line.trim() === '') {
+          elements.push(<div key={key} className="h-2" />);
+        } else {
+          elements.push(<p key={key} className="leading-relaxed text-[#9aa4b2] my-1 text-left">{parseInlineStyles(line)}</p>);
+        }
+      }
+    });
+
+    flushList(`end-${idx}`);
+    flushTable(`end-${idx}`);
+    return elements;
+  });
+};
+
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -33,8 +156,27 @@ export default function Dashboard() {
 
   // History Ledger states
   const [scanHistory, setScanHistory] = useState([]);
-  const [historySearch, setHistorySearch] = useState('');
-  const [historyFilter, setHistoryFilter] = useState('ALL'); // ALL, MALICIOUS, SUSPICIOUS, CLEAN
+  const [searchQuery, setSearchQuery] = useState('');
+  const [fileType, setFileType] = useState('ALL');
+  const [dateRange, setDateRange] = useState('ALL');
+  const [riskLevel, setRiskLevel] = useState('ALL');
+  const [scanStatus, setScanStatus] = useState('ALL');
+  const [malwareType, setMalwareType] = useState('ALL');
+  const [fileSize, setFileSize] = useState('ALL');
+  const [sortOrder, setSortOrder] = useState('newest');
+  
+  // User Activity states
+  const [activities, setActivities] = useState([]);
+
+  // Session ID for the AI Copilot chat
+  const [sessionId, setSessionId] = useState(() => {
+    let sid = sessionStorage.getItem('blueintel_copilot_session_id');
+    if (!sid) {
+      sid = Math.random().toString(36).substring(7) + '_' + Date.now();
+      sessionStorage.setItem('blueintel_copilot_session_id', sid);
+    }
+    return sid;
+  });
   
   // Global search state
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
@@ -76,7 +218,17 @@ export default function Dashboard() {
 
   const fetchHistoryLedger = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/history-ledger/`);
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('q', searchQuery);
+      if (fileType !== 'ALL') params.append('file_type', fileType);
+      if (dateRange !== 'ALL') params.append('date', dateRange);
+      if (riskLevel !== 'ALL') params.append('risk', riskLevel);
+      if (scanStatus !== 'ALL') params.append('status', scanStatus);
+      if (malwareType !== 'ALL') params.append('malware', malwareType);
+      if (fileSize !== 'ALL') params.append('size', fileSize);
+      params.append('sort', sortOrder);
+
+      const res = await fetch(`${API_BASE}/api/v1/history-ledger/?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setScanHistory(data);
@@ -85,6 +237,27 @@ export default function Dashboard() {
       console.error("Error loading scan ledger: ", err);
     }
   };
+
+  const fetchActivities = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/activities/`);
+      if (res.ok) {
+        const data = await res.json();
+        setActivities(data);
+      }
+    } catch (err) {
+      console.error("Error loading activity logs: ", err);
+    }
+  };
+
+  // Debounced search query & filters sync
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchHistoryLedger();
+    }, 250); // 250ms debounce
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, fileType, dateRange, riskLevel, scanStatus, malwareType, fileSize, sortOrder]);
 
   const fetchThreatFeeds = async () => {
     try {
@@ -117,6 +290,7 @@ export default function Dashboard() {
     fetchHistoryLedger();
     fetchThreatFeeds();
     fetchNotifications();
+    fetchActivities();
 
     const sse = new EventSource(`${API_BASE}/api/v1/telemetry-stream/`);
 
@@ -158,6 +332,7 @@ export default function Dashboard() {
             fetchHistoryLedger();
             fetchStats();
             fetchNotifications();
+            fetchActivities();
           }
         }
         else if (message.type === 'STATS_UPDATE') {
@@ -296,6 +471,9 @@ export default function Dashboard() {
           }
           return item;
         }));
+        fetchActivities();
+        fetchHistoryLedger();
+        fetchStats();
       } else {
         setUploadQueue(prev => prev.map(item => {
           if (item.id === itemId) {
@@ -340,24 +518,105 @@ export default function Dashboard() {
   // Delete history item
   const handleHistoryDelete = async (logId) => {
     try {
-      // Backend does not enforce strict user delete for standalone development, so we can clean local rows
       const res = await fetch(`${API_BASE}/api/v1/history-ledger/`, {
-        method: 'POST', // standard endpoint routing fallback if DELETE isn't mapped
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', id: logId })
       });
       fetchHistoryLedger();
       fetchStats();
+      fetchActivities();
     } catch (err) {
-      // Direct local filter fallback
       setScanHistory(prev => prev.filter(item => item.id !== logId));
     }
   };
 
+  // Re-analyze file
+  const handleReanalyze = async (logId) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/history-ledger/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reanalyze', id: logId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const record = scanHistory.find(x => x.id === logId);
+        setUploadQueue(prev => [
+          {
+            id: Math.random().toString(36).substring(7),
+            name: record ? record.name : "Re-analyzing file...",
+            size: record ? record.size : "N/A",
+            status: 'PROCESSING',
+            status_detail: 'Waiting',
+            logId: logId,
+            result: null
+          },
+          ...prev
+        ]);
+        setActiveTab('detonate');
+        fetchHistoryLedger();
+        fetchStats();
+        fetchActivities();
+      }
+    } catch (err) {
+      console.error("Re-analysis request failed:", err);
+    }
+  };
+
+  // Load chat history from backend
+  const loadChatHistory = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/copilot/chat/?session_id=${sessionId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const chatLogs = [];
+        data.forEach(chat => {
+          chatLogs.push({ role: 'user', text: chat.question });
+          chatLogs.push({ role: 'assistant', text: chat.response });
+        });
+        setAiReportChat(chatLogs);
+      }
+    } catch (err) {
+      console.error("Failed to load chat history:", err);
+    }
+  };
+
+  // Clear chat history
+  const clearChatHistory = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/copilot/chat/?session_id=${sessionId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setAiReportChat([]);
+        setAgentLogs(prev => [
+          ...prev,
+          `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Conversation audit records cleared.`
+        ]);
+      }
+    } catch (err) {
+      console.error("Failed to clear chat history:", err);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    setAgentLogs(prev => [
+      ...prev,
+      `[${new Date().toLocaleTimeString()}] SYSTEM: Copied response text to clipboard.`
+    ]);
+  };
+
+  // Trigger chat load when session ID mounts
+  useEffect(() => {
+    loadChatHistory();
+  }, [sessionId]);
+
   // AI Copilot playbooks query submission
   const submitAiQuestion = async (e) => {
     if (e) e.preventDefault();
-    if (!aiReportQuery.trim() || !selectedAnalysis) return;
+    if (!aiReportQuery.trim()) return;
 
     const userText = aiReportQuery;
     setAiReportChat(prev => [...prev, { role: 'user', text: userText }]);
@@ -366,42 +625,44 @@ export default function Dashboard() {
 
     setAgentLogs(prev => [
       ...prev,
-      `[${new Date().toLocaleTimeString()}] OPERATOR: "${userText}"`,
-      `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Formulating query vector...`,
-      `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Querying secure LLM gateway...`
+      `[${new Date().toLocaleTimeString()}] USER: "${userText}"`,
+      `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Fetching threat database contexts...`,
+      `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Querying Anthropic Claude API...`
     ]);
 
     try {
-      const res = await fetch(`${API_BASE}/api/v1/ai-report/`, {
+      const res = await fetch(`${API_BASE}/api/v1/copilot/chat/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          analysis_results: selectedAnalysis,
-          query: userText
+          query: userText,
+          analysis_id: selectedAnalysis ? selectedAnalysis.id : null,
+          session_id: sessionId
         })
       });
 
       if (res.ok) {
         const data = await res.json();
-        setAiReportChat(prev => [...prev, { role: 'assistant', text: data.report }]);
+        setAiReportChat(prev => [...prev, { role: 'assistant', text: data.response }]);
         setAgentLogs(prev => [
           ...prev,
-          `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Analysis successfully generated. Output rendered.`
+          `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Response generated in ${data.response_time}s.`
         ]);
+        fetchActivities();
       } else {
         const errData = await res.json().catch(() => ({}));
-        const errMsg = errData.error || "Failed to receive response from AI backend.";
+        const errMsg = errData.error || "Failed to receive response from AI Security Assistant.";
         setAiReportChat(prev => [...prev, { role: 'assistant', text: `⚠️ ${errMsg}` }]);
         setAgentLogs(prev => [
           ...prev,
-          `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Error - Request failed: ${errMsg}`
+          `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Error - Request failed: ${errMsg}`
         ]);
       }
     } catch (err) {
       setAiReportChat(prev => [...prev, { role: 'assistant', text: "🔌 AI connection socket timeout." }]);
       setAgentLogs(prev => [
         ...prev,
-        `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Error - Connection timeout.`
+        `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Error - Connection timeout.`
       ]);
     } finally {
       setIsAiLoading(false);
@@ -409,49 +670,51 @@ export default function Dashboard() {
   };
 
   const executeAgentAction = async (command, promptText) => {
-    if (isAiLoading || !selectedAnalysis) return;
+    if (isAiLoading) return;
     setIsAiLoading(true);
 
     setAgentLogs(prev => [
       ...prev,
       `[${new Date().toLocaleTimeString()}] COMMAND_EXECUTED: "${command}"`,
-      `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Compiling telemetry contexts...`,
-      `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Invoking query pipeline...`
+      `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Compiling telemetry contexts...`,
+      `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Dispatching instructions...`
     ]);
 
-    setAiReportChat(prev => [...prev, { role: 'user', text: `Triggering action: ${command}` }]);
+    setAiReportChat(prev => [...prev, { role: 'user', text: `Execute agent shortcut action: ${command}` }]);
 
     try {
-      const res = await fetch(`${API_BASE}/api/v1/ai-report/`, {
+      const res = await fetch(`${API_BASE}/api/v1/copilot/chat/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          analysis_results: selectedAnalysis,
-          query: promptText
+          query: promptText,
+          analysis_id: selectedAnalysis ? selectedAnalysis.id : null,
+          session_id: sessionId
         })
       });
 
       if (res.ok) {
         const data = await res.json();
-        setAiReportChat(prev => [...prev, { role: 'assistant', text: data.report }]);
+        setAiReportChat(prev => [...prev, { role: 'assistant', text: data.response }]);
         setAgentLogs(prev => [
           ...prev,
-          `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Command "${command}" executed. Outputs loaded.`
+          `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Command "${command}" execution complete.`
         ]);
+        fetchActivities();
       } else {
         const errData = await res.json().catch(() => ({}));
         const errMsg = errData.error || "Failed to execute agent action.";
         setAiReportChat(prev => [...prev, { role: 'assistant', text: `⚠️ ${errMsg}` }]);
         setAgentLogs(prev => [
           ...prev,
-          `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Command "${command}" failed - ${errMsg}`
+          `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Command "${command}" failed - ${errMsg}`
         ]);
       }
     } catch (err) {
       setAiReportChat(prev => [...prev, { role: 'assistant', text: "🔌 AI connection socket timeout." }]);
       setAgentLogs(prev => [
         ...prev,
-        `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Command "${command}" timed out.`
+        `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Command "${command}" timed out.`
       ]);
     } finally {
       setIsAiLoading(false);
@@ -543,6 +806,12 @@ export default function Dashboard() {
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold font-mono uppercase tracking-wider cursor-pointer transition-all ${activeTab === 'history' ? 'bg-[#25a5ff]/10 text-white border-l-2 border-[#25a5ff]' : 'text-[#576575] hover:text-white hover:bg-white/5'}`}
           >
             <Database size={16} /> Analysis History
+          </button>
+          <button 
+            onClick={() => setActiveTab('activity_history')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold font-mono uppercase tracking-wider cursor-pointer transition-all ${activeTab === 'activity_history' ? 'bg-[#25a5ff]/10 text-white border-l-2 border-[#25a5ff]' : 'text-[#576575] hover:text-white hover:bg-white/5'}`}
+          >
+            <Clock size={16} /> Activity History
           </button>
           <button 
             onClick={() => setActiveTab('notifications')}
@@ -964,25 +1233,128 @@ export default function Dashboard() {
                   <h2 className="text-xl font-bold uppercase tracking-wider text-white">Analysis History</h2>
                   <p className="text-xs text-[#576575] font-mono mt-1 uppercase">Review results of previously analyzed files.</p>
                 </div>
-                
-                <div className="flex flex-wrap items-center gap-3">
-                  <input 
-                    type="text" 
-                    value={historySearch}
-                    onChange={(e) => setHistorySearch(e.target.value)}
-                    placeholder="Search Files..."
-                    className="bg-[#04060d] border border-[#25a5ff]/15 rounded-xl px-4 py-2 text-xs text-white placeholder-[#576575] outline-none font-mono focus:border-[#25a5ff]"
-                  />
-                  <select 
-                    value={historyFilter}
-                    onChange={(e) => setHistoryFilter(e.target.value)}
-                    className="bg-[#04060d] border border-[#25a5ff]/15 rounded-xl px-4 py-2 text-xs text-white outline-none font-mono text-center cursor-pointer"
-                  >
-                    <option value="ALL">All Results</option>
-                    <option value="MALICIOUS">MALICIOUS</option>
-                    <option value="SUSPICIOUS">SUSPICIOUS</option>
-                    <option value="CLEAN">CLEAN</option>
-                  </select>
+              </div>
+
+              {/* Advanced Filters Panel */}
+              <div className="bg-[#0b0f19]/60 border border-[#25a5ff]/15 rounded-2xl p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Search Query */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-mono text-[#576575] uppercase font-bold">Search query</label>
+                    <div className="relative flex items-center">
+                      <Search className="absolute left-3 text-[#576575]" size={12} />
+                      <input 
+                        type="text" 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search name, hash, verdict..."
+                        className="w-full bg-[#04060d] border border-[#25a5ff]/15 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-[#576575] outline-none font-mono focus:border-[#25a5ff] transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* File Type */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-mono text-[#576575] uppercase font-bold">File type</label>
+                    <select 
+                      value={fileType}
+                      onChange={(e) => setFileType(e.target.value)}
+                      className="bg-[#04060d] border border-[#25a5ff]/15 rounded-xl px-3 py-2 text-xs text-white outline-none font-mono cursor-pointer focus:border-[#25a5ff] transition-all"
+                    >
+                      <option value="ALL">All Extensions</option>
+                      <option value=".exe">Executable (.exe)</option>
+                      <option value=".dll">Dynamic Link Library (.dll)</option>
+                      <option value=".pdf">PDF Document (.pdf)</option>
+                      <option value=".doc">Word (.doc)</option>
+                      <option value=".docx">Word OpenXML (.docx)</option>
+                      <option value=".zip">Zip Archive (.zip)</option>
+                      <option value=".rar">Rar Archive (.rar)</option>
+                      <option value=".iso">ISO Image (.iso)</option>
+                      <option value=".apk">Android Package (.apk)</option>
+                      <option value=".js">Javascript (.js)</option>
+                      <option value=".ps1">PowerShell (.ps1)</option>
+                      <option value=".bat">Batch (.bat)</option>
+                    </select>
+                  </div>
+
+                  {/* Risk Level */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-mono text-[#576575] uppercase font-bold">Risk level</label>
+                    <select 
+                      value={riskLevel}
+                      onChange={(e) => setRiskLevel(e.target.value)}
+                      className="bg-[#04060d] border border-[#25a5ff]/15 rounded-xl px-3 py-2 text-xs text-white outline-none font-mono cursor-pointer focus:border-[#25a5ff] transition-all"
+                    >
+                      <option value="ALL">All Verdicts</option>
+                      <option value="MALICIOUS">MALICIOUS</option>
+                      <option value="SUSPICIOUS">SUSPICIOUS</option>
+                      <option value="CLEAN">CLEAN</option>
+                    </select>
+                  </div>
+
+                  {/* Upload Date */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-mono text-[#576575] uppercase font-bold">Upload date</label>
+                    <select 
+                      value={dateRange}
+                      onChange={(e) => setDateRange(e.target.value)}
+                      className="bg-[#04060d] border border-[#25a5ff]/15 rounded-xl px-3 py-2 text-xs text-white outline-none font-mono cursor-pointer focus:border-[#25a5ff] transition-all"
+                    >
+                      <option value="ALL">All Time</option>
+                      <option value="Today">Today</option>
+                      <option value="Last 7 Days">Last 7 Days</option>
+                      <option value="Last 30 Days">Last 30 Days</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Status */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-mono text-[#576575] uppercase font-bold">Analysis Status</label>
+                    <select 
+                      value={scanStatus}
+                      onChange={(e) => setScanStatus(e.target.value)}
+                      className="bg-[#04060d] border border-[#25a5ff]/15 rounded-xl px-3 py-2 text-xs text-white outline-none font-mono cursor-pointer focus:border-[#25a5ff] transition-all"
+                    >
+                      <option value="ALL">All Statuses</option>
+                      <option value="PROCESSING">PROCESSING</option>
+                      <option value="COMPLETED">COMPLETED</option>
+                      <option value="FAILED">FAILED</option>
+                    </select>
+                  </div>
+
+                  {/* File Size */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-mono text-[#576575] uppercase font-bold">File size</label>
+                    <select 
+                      value={fileSize}
+                      onChange={(e) => setFileSize(e.target.value)}
+                      className="bg-[#04060d] border border-[#25a5ff]/15 rounded-xl px-3 py-2 text-xs text-white outline-none font-mono cursor-pointer focus:border-[#25a5ff] transition-all"
+                    >
+                      <option value="ALL">Any Size</option>
+                      <option value="Small">Small (&lt;10KB)</option>
+                      <option value="Medium">Medium (10KB - 1MB)</option>
+                      <option value="Large">Large (&gt;1MB)</option>
+                    </select>
+                  </div>
+
+                  {/* Sort Order */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-mono text-[#576575] uppercase font-bold">Sort by</label>
+                    <select 
+                      value={sortOrder}
+                      onChange={(e) => setSortOrder(e.target.value)}
+                      className="bg-[#04060d] border border-[#25a5ff]/15 rounded-xl px-3 py-2 text-xs text-white outline-none font-mono cursor-pointer focus:border-[#25a5ff] transition-all"
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                      <option value="highest_risk">Highest Risk</option>
+                      <option value="lowest_risk">Lowest Risk</option>
+                      <option value="largest_file">Largest File</option>
+                      <option value="smallest_file">Smallest File</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -995,27 +1367,28 @@ export default function Dashboard() {
                         <th className="p-4 uppercase">File Hash (SHA-256)</th>
                         <th className="p-4 uppercase">Final Result</th>
                         <th className="p-4 uppercase">Threat Score</th>
+                        <th className="p-4 uppercase">File Size</th>
                         <th className="p-4 uppercase">Analysis Time</th>
                         <th className="p-4 uppercase text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {scanHistory
-                        .filter(log => {
-                          const matchesSearch = log.name.toLowerCase().includes(historySearch.toLowerCase()) || log.hash.toLowerCase().includes(historySearch.toLowerCase());
-                          const matchesFilter = historyFilter === 'ALL' || log.verdict === historyFilter;
-                          return matchesSearch && matchesFilter;
-                        })
-                        .map((item) => (
+                      {scanHistory.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="p-8 text-center text-[#576575]">No matching scan records located.</td>
+                        </tr>
+                      ) : (
+                        scanHistory.map((item) => (
                           <tr key={item.id} className="border-b border-[#25a5ff]/5 hover:bg-[#25a5ff]/5">
                             <td className="p-4 text-white font-bold max-w-xs truncate">{item.name}</td>
-                            <td className="p-4 font-mono text-[#576575] text-[11px]">{item.hash}</td>
+                            <td className="p-4 font-mono text-[#576575] text-[11px] truncate max-w-[180px]">{item.hash}</td>
                             <td className="p-4">
-                              <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${item.verdict === 'MALICIOUS' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : item.verdict === 'SUSPICIOUS' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-green-500/10 text-green-400'}`}>
+                              <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${item.verdict === 'MALICIOUS' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : item.verdict === 'SUSPICIOUS' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'}`}>
                                 {item.verdict}
                               </span>
                             </td>
                             <td className="p-4 font-bold text-white">{item.score}%</td>
+                            <td className="p-4 text-[#576575]">{item.size || 'N/A'}</td>
                             <td className="p-4 text-[#576575]">{item.time}</td>
                             <td className="p-4 text-right">
                               <div className="flex items-center justify-end gap-3">
@@ -1032,6 +1405,13 @@ export default function Dashboard() {
                                   <Download size={12} /> PDF
                                 </button>
                                 <button 
+                                  onClick={() => handleReanalyze(item.id)}
+                                  className="text-[#25a5ff] hover:underline flex items-center gap-1 cursor-pointer font-bold"
+                                  title="Re-analyze File"
+                                >
+                                  <RefreshCw size={12} /> Re-run
+                                </button>
+                                <button 
                                   onClick={() => handleHistoryDelete(item.id)}
                                   className="text-red-400 hover:text-red-300 cursor-pointer"
                                 >
@@ -1040,11 +1420,61 @@ export default function Dashboard() {
                               </div>
                             </td>
                           </tr>
-                        ))}
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* USER ACTIVITY HISTORY AUDIT LOG TAB */}
+          {activeTab === 'activity_history' && (
+            <div className="space-y-8 animate-fadeIn">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold uppercase tracking-wider text-white">Activity History</h2>
+                  <p className="text-xs text-[#576575] font-mono mt-1 uppercase">Audit log of system actions and operations.</p>
+                </div>
+              </div>
+
+              {activities.length === 0 ? (
+                <div className="text-center py-16 bg-[#0b0f19]/30 border border-[#25a5ff]/15 rounded-3xl text-xs text-[#576575] font-mono">
+                  No activity history or audit log records available.
+                </div>
+              ) : (
+                <div className="bg-[#0b0f19]/60 border border-[#25a5ff]/15 rounded-2xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left font-mono text-xs text-[#9aa4b2]">
+                      <thead>
+                        <tr className="border-b border-[#25a5ff]/15 bg-[#070913] text-[#576575]">
+                          <th className="p-4 uppercase">Event Action</th>
+                          <th className="p-4 uppercase">Status</th>
+                          <th className="p-4 uppercase">Details / Description</th>
+                          <th className="p-4 uppercase">Operator IP</th>
+                          <th className="p-4 uppercase">Timestamp</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activities.map((item) => (
+                          <tr key={item.id} className="border-b border-[#25a5ff]/5 hover:bg-[#25a5ff]/5">
+                            <td className="p-4 font-bold text-white uppercase tracking-wider">{item.action}</td>
+                            <td className="p-4">
+                              <span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase ${item.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                                {item.status || 'SUCCESS'}
+                              </span>
+                            </td>
+                            <td className="p-4 text-[#9aa4b2] max-w-md truncate" title={item.details}>{item.details}</td>
+                            <td className="p-4 text-[#576575]">{item.ip}</td>
+                            <td className="p-4 text-[#576575]">{item.time}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1300,14 +1730,25 @@ export default function Dashboard() {
                     </h4>
                     <p className="text-[10px] text-[#576575] font-mono mt-1">Ask the AI to explain malware behavior and security findings.</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isAiLoading ? 'bg-amber-400' : 'bg-green-400'}`}></span>
-                      <span className={`relative inline-flex rounded-full h-2 w-2 ${isAiLoading ? 'bg-amber-500' : 'bg-green-500'}`}></span>
-                    </span>
-                    <span className="text-[10px] font-mono text-white tracking-wider">
-                      {isAiLoading ? 'AI: ANALYZING...' : 'AI: READY'}
-                    </span>
+                  <div className="flex items-center gap-4">
+                    {aiReportChat.length > 0 && (
+                      <button 
+                        type="button"
+                        onClick={clearChatHistory}
+                        className="px-3 py-1 border border-red-500/30 hover:border-red-500 text-red-400 rounded-xl text-[9px] font-mono font-bold uppercase cursor-pointer transition-all"
+                      >
+                        Clear Chat
+                      </button>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isAiLoading ? 'bg-amber-400' : 'bg-green-400'}`}></span>
+                        <span className={`relative inline-flex rounded-full h-2 w-2 ${isAiLoading ? 'bg-amber-500' : 'bg-green-500'}`}></span>
+                      </span>
+                      <span className="text-[10px] font-mono text-white tracking-wider">
+                        {isAiLoading ? 'AI: ANALYZING...' : 'AI: READY'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -1374,18 +1815,46 @@ export default function Dashboard() {
                   
                   <div className="space-y-4 max-h-96 overflow-y-auto p-4 bg-[#04060d] border border-white/5 rounded-2xl text-xs">
                     {/* Render initial report message as baseline */}
-                    <div className="bg-white/5 text-[#9aa4b2] p-4 rounded-xl mr-auto text-left whitespace-pre-wrap font-sans border border-white/5">
-                      <span className="block text-[8px] text-[#25a5ff] mb-2 font-mono font-bold uppercase">🚨 AI Analysis Summary</span>
-                      {selectedAnalysis.ai_generated_report || "No initial playbook generated."}
+                    <div className="bg-white/5 text-[#9aa4b2] p-4 rounded-xl mr-auto text-left border border-white/5 w-full">
+                      <div className="flex justify-between items-start gap-4 mb-2 font-mono">
+                        <span className="block text-[8px] text-[#25a5ff] font-bold uppercase">🚨 AI Analysis Summary</span>
+                        {selectedAnalysis.ai_generated_report && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(selectedAnalysis.ai_generated_report)}
+                            className="text-[9px] text-[#576575] hover:text-white cursor-pointer transition-colors"
+                            title="Copy AI summary"
+                          >
+                            [COPY]
+                          </button>
+                        )}
+                      </div>
+                      <div className="text-xs leading-relaxed">
+                        {renderMarkdown(selectedAnalysis.ai_generated_report || "No initial playbook generated.")}
+                      </div>
                     </div>
 
                     {/* Chat history list */}
                     {aiReportChat.map((msg, i) => (
-                      <div key={i} className={`p-4 rounded-xl max-w-2xl border ${msg.role === 'user' ? 'bg-[#25a5ff]/5 border-[#25a5ff]/30 ml-auto text-right text-white font-mono' : 'bg-white/5 border-white/5 text-[#9aa4b2] mr-auto text-left whitespace-pre-wrap font-sans'}`}>
-                        <span className="block text-[8px] text-[#576575] mb-2 font-mono font-bold uppercase">
-                          {msg.role === 'user' ? 'USER' : 'AI ASSISTANT'}
-                        </span>
-                        {msg.text}
+                      <div key={i} className={`p-4 rounded-xl border ${msg.role === 'user' ? 'bg-[#25a5ff]/5 border-[#25a5ff]/30 ml-auto text-right text-white font-mono max-w-2xl' : 'bg-white/5 border-white/5 text-[#9aa4b2] mr-auto text-left w-full'}`}>
+                        <div className="flex justify-between items-start gap-4 mb-2 font-mono">
+                          <span className="block text-[8px] text-[#576575] font-bold uppercase">
+                            {msg.role === 'user' ? 'USER' : 'AI ASSISTANT'}
+                          </span>
+                          {msg.role === 'assistant' && (
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(msg.text)}
+                              className="text-[9px] text-[#576575] hover:text-white cursor-pointer transition-colors"
+                              title="Copy AI response"
+                            >
+                              [COPY]
+                            </button>
+                          )}
+                        </div>
+                        <div className="text-xs leading-relaxed">
+                          {msg.role === 'user' ? parseInlineStyles(msg.text) : renderMarkdown(msg.text)}
+                        </div>
                       </div>
                     ))}
 

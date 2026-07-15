@@ -23,7 +23,9 @@ from analyzer.views import (
     ThreatIntelligenceView,
     GlobalSearchView,
     NotificationView,
-    TelemetryStreamView
+    TelemetryStreamView,
+    UserActivityListView,
+    AICopilotChatView
 )
 
 urlpatterns = [
@@ -52,6 +54,7 @@ urlpatterns = [
     
     # User Profile & Activity audit logging details
     path('api/v1/profile/', UserProfileView.as_view(), name='api_profile'),
+    path('api/v1/activities/', UserActivityListView.as_view(), name='api_activities'),
     
     # Encrypted settings keys storage updating controls
     path('api/v1/settings/', UserSettingView.as_view(), name='api_settings'),
@@ -59,6 +62,7 @@ urlpatterns = [
     # Analysis detonate upload and historical registry
     path('api/v1/upload/', MalwareUploadView.as_view(), name='file_upload_analysis'),
     path('api/v1/ai-report/', AIThreatReportView.as_view(), name='ai_threat_report'),
+    path('api/v1/copilot/chat/', AICopilotChatView.as_view(), name='api_copilot_chat'),
     path('api/v1/history-ledger/', ScanHistoryLedgerView.as_view(), name='history_ledger'),
     path('api/v1/scan-status/<int:pk>/', ScanStatusView.as_view(), name='api_scan_status'),
     path('api/v1/dashboard-stats/', DashboardStatsView.as_view(), name='api_dashboard_stats'),

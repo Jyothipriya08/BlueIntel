@@ -119,3 +119,21 @@ class UserSetting(models.Model):
 
     def __str__(self):
         return f"Settings for {self.user.username}"
+
+
+class AIChatHistory(models.Model):
+    user_id = models.IntegerField(null=True, blank=True)
+    session_id = models.CharField(max_length=100, null=True, blank=True)
+    question = models.TextField()
+    ai_response = models.TextField()
+    related_file_name = models.CharField(max_length=255, null=True, blank=True)
+    analysis_id = models.IntegerField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    response_time_seconds = models.FloatField(default=0.0)
+    model_used = models.CharField(max_length=100, default='claude-3-5-sonnet-20241022')
+
+    class Meta:
+        ordering = ['timestamp']
+
+    def __str__(self):
+        return f"Chat for user {self.user_id} - {self.timestamp}"
