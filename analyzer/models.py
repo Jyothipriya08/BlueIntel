@@ -80,6 +80,8 @@ class UserOTP(models.Model):
 class UserActivityLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='activities')
     action = models.CharField(max_length=255)
+    status = models.CharField(max_length=50, default='SUCCESS')
+    details = models.TextField(blank=True, null=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -89,7 +91,7 @@ class UserActivityLog(models.Model):
 
     def __str__(self):
         caller = self.user.username if self.user else "Anonymous"
-        return f"{caller} - {self.action} at {self.timestamp}"
+        return f"{caller} - {self.action} ({self.status}) at {self.timestamp}"
 
 
 class UserNotification(models.Model):

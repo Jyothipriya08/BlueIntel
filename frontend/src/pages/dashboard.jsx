@@ -503,7 +503,7 @@ export default function Dashboard() {
           <img src="/logo.png" className="h-10 w-auto rounded-lg shadow-[0_0_15px_rgba(37,165,255,0.35)] border border-[#25a5ff]/25" alt="BlueIntel Logo" />
           <div>
             <span className="font-black text-xs tracking-widest uppercase">BLUE<span className="text-[#25a5ff]">INTEL</span></span>
-            <span className="block text-[8px] text-[#576575] font-mono tracking-widest font-bold">CYBER SECURITY XDR</span>
+            <span className="block text-[8px] text-[#576575] font-mono tracking-widest font-bold">Control Panel</span>
           </div>
         </div>
 
@@ -519,7 +519,7 @@ export default function Dashboard() {
             onClick={() => setActiveTab('detonate')}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold font-mono uppercase tracking-wider cursor-pointer transition-all ${activeTab === 'detonate' ? 'bg-[#25a5ff]/10 text-white border-l-2 border-[#25a5ff]' : 'text-[#576575] hover:text-white hover:bg-white/5'}`}
           >
-            <span className="flex items-center gap-3"><UploadCloud size={16} /> Ingest Center</span>
+            <span className="flex items-center gap-3"><UploadCloud size={16} /> Upload Files</span>
             {uploadQueue.filter(j => j.status === 'PROCESSING').length > 0 && (
               <span className="bg-[#25a5ff] text-black text-[9px] font-bold px-2 py-0.5 rounded-full animate-pulse">
                 {uploadQueue.filter(j => j.status === 'PROCESSING').length}
@@ -530,7 +530,7 @@ export default function Dashboard() {
             onClick={() => setActiveTab('threat_intel')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold font-mono uppercase tracking-wider cursor-pointer transition-all ${activeTab === 'threat_intel' ? 'bg-[#25a5ff]/10 text-white border-l-2 border-[#25a5ff]' : 'text-[#576575] hover:text-white hover:bg-white/5'}`}
           >
-            <Globe size={16} /> Threat Intel
+            <Globe size={16} /> Threat Intelligence
           </button>
           <button 
             onClick={() => setActiveTab('world_map')}
@@ -542,13 +542,13 @@ export default function Dashboard() {
             onClick={() => setActiveTab('history')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold font-mono uppercase tracking-wider cursor-pointer transition-all ${activeTab === 'history' ? 'bg-[#25a5ff]/10 text-white border-l-2 border-[#25a5ff]' : 'text-[#576575] hover:text-white hover:bg-white/5'}`}
           >
-            <Database size={16} /> Scan Ledger
+            <Database size={16} /> Analysis History
           </button>
           <button 
             onClick={() => setActiveTab('notifications')}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold font-mono uppercase tracking-wider cursor-pointer transition-all ${activeTab === 'notifications' ? 'bg-[#25a5ff]/10 text-white border-l-2 border-[#25a5ff]' : 'text-[#576575] hover:text-white hover:bg-white/5'}`}
           >
-            <span className="flex items-center gap-3"><Bell size={16} /> Alerts feed</span>
+            <span className="flex items-center gap-3"><Bell size={16} /> Notifications</span>
             {unreadCount > 0 && (
               <span className="bg-[#ef4444] text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
                 {unreadCount}
@@ -658,35 +658,35 @@ export default function Dashboard() {
               {/* Telemetry card grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <div className="bg-[#0b0f19]/70 border border-[#25a5ff]/15 p-6 rounded-2xl flex flex-col justify-between hover:border-[#25a5ff]/35 transition-all">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#576575] font-bold">Total Ingested</span>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#576575] font-bold">Uploaded Files</span>
                   <div className="flex items-baseline justify-between mt-4">
                     <span className="text-3xl font-black">{stats.total_analyzed}</span>
                     <span className="text-[10px] text-[#10b981] font-mono">Real-time</span>
                   </div>
                 </div>
                 <div className="bg-[#0b0f19]/70 border border-[#25a5ff]/15 p-6 rounded-2xl flex flex-col justify-between hover:border-[#25a5ff]/35 transition-all">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#576575] font-bold">Active Processing</span>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#576575] font-bold">Files Being Analyzed</span>
                   <div className="flex items-baseline justify-between mt-4">
                     <span className="text-3xl font-black text-[#25a5ff]">{stats.processing}</span>
                     <span className="text-[10px] text-[#25a5ff] font-mono animate-pulse">Running...</span>
                   </div>
                 </div>
                 <div className="bg-[#0b0f19]/70 border border-[#25a5ff]/15 p-6 rounded-2xl flex flex-col justify-between hover:border-[#25a5ff]/35 transition-all">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#576575] font-bold">Malicious Verdicts</span>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#576575] font-bold">Malicious Files</span>
                   <div className="flex items-baseline justify-between mt-4">
                     <span className="text-3xl font-black text-[#ef4444]">{stats.malicious}</span>
                     <span className="text-[9px] bg-red-950/40 border border-red-500/20 text-red-400 px-2 py-0.5 rounded font-mono font-bold">Threat</span>
                   </div>
                 </div>
                 <div className="bg-[#0b0f19]/70 border border-[#25a5ff]/15 p-6 rounded-2xl flex flex-col justify-between hover:border-[#25a5ff]/35 transition-all">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#576575] font-bold">Suspicious Activity</span>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#576575] font-bold">Suspicious Files</span>
                   <div className="flex items-baseline justify-between mt-4">
                     <span className="text-3xl font-black text-[#f59e0b]">{stats.suspicious}</span>
                     <span className="text-[9px] bg-yellow-950/40 border border-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded font-mono font-bold">Warning</span>
                   </div>
                 </div>
                 <div className="bg-[#0b0f19]/70 border border-[#25a5ff]/15 p-6 rounded-2xl flex flex-col justify-between hover:border-[#25a5ff]/35 transition-all">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#576575] font-bold">Avg Scan Duration</span>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#576575] font-bold">Average Analysis Time</span>
                   <div className="flex items-baseline justify-between mt-4">
                     <span className="text-3xl font-black">{stats.avg_duration}s</span>
                     <span className="text-[10px] text-[#576575] font-mono">Performance</span>
@@ -700,11 +700,11 @@ export default function Dashboard() {
                 {/* Daily Ingestion trend */}
                 <div className="bg-[#0b0f19]/60 border border-[#25a5ff]/15 p-6 rounded-2xl lg:col-span-2">
                   <h3 className="text-xs font-bold font-mono uppercase text-[#576575] tracking-wider mb-6 flex items-center gap-2">
-                    <Activity size={14} className="text-[#25a5ff]" /> Detonation telemetry (Last 7 Days)
+                    <Activity size={14} className="text-[#25a5ff]" /> Analysis Activity (Last 7 Days)
                   </h3>
                   <div className="h-64 w-full">
                     {stats.chart_data_daily.length === 0 ? (
-                      <div className="h-full flex items-center justify-center text-xs font-mono text-[#576575]">Ingesting payloads to render trend chart...</div>
+                      <div className="h-full flex items-center justify-center text-xs font-mono text-[#576575]">Upload files to see activity chart...</div>
                     ) : (
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={stats.chart_data_daily}>
@@ -727,11 +727,11 @@ export default function Dashboard() {
                 {/* Threat Classification breakdown */}
                 <div className="bg-[#0b0f19]/60 border border-[#25a5ff]/15 p-6 rounded-2xl">
                   <h3 className="text-xs font-bold font-mono uppercase text-[#576575] tracking-wider mb-6 flex items-center gap-2">
-                    <Shield size={14} className="text-red-500" /> Verdict severity shares
+                    <Shield size={14} className="text-red-500" /> Threat Level Shares
                   </h3>
                   <div className="h-48 w-full flex items-center justify-center relative">
                     {stats.total_analyzed === 0 ? (
-                      <span className="text-xs font-mono text-[#576575]">Telemetry empty</span>
+                      <span className="text-xs font-mono text-[#576575]">No data available</span>
                     ) : (
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
@@ -769,7 +769,7 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <span className="block w-2.5 h-2.5 bg-green-500 rounded-full mx-auto mb-1" />
-                      <span className="text-white font-bold">{stats.benign} Benign</span>
+                      <span className="text-white font-bold">{stats.benign} Clean</span>
                     </div>
                   </div>
                 </div>
@@ -778,10 +778,10 @@ export default function Dashboard() {
               {/* Recent threat activity list */}
               <div className="bg-[#0b0f19]/60 border border-[#25a5ff]/15 p-6 rounded-2xl">
                 <h3 className="text-xs font-bold font-mono uppercase text-[#576575] tracking-wider mb-6 flex items-center gap-2">
-                  <AlertTriangle size={14} className="text-[#ef4444]" /> Critical Threat Alerts
+                  <AlertTriangle size={14} className="text-[#ef4444]" /> Important Alerts
                 </h3>
                 {stats.alerts.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-[#576575] font-mono">No threat vectors identified in recent ingestions.</div>
+                  <div className="text-center py-6 text-xs text-[#576575] font-mono">No alerts identified in recent uploads.</div>
                 ) : (
                   <div className="space-y-4">
                     {stats.alerts.map((alert) => (
@@ -826,8 +826,8 @@ export default function Dashboard() {
                 />
                 <label htmlFor="fileBrowseInput" className="cursor-pointer">
                   <UploadCloud size={48} className="mx-auto text-[#25a5ff] drop-shadow-[0_0_15px_rgba(37,165,255,0.3)] mb-4 animate-bounce" />
-                  <h2 className="text-md font-bold uppercase tracking-wider text-white">Ingest Payload Node</h2>
-                  <p className="text-xs text-[#576575] font-mono mt-2 tracking-wide">DRAG AND DROP FILE OR CLICK TO BROWSE BINARIES</p>
+                  <h2 className="text-md font-bold uppercase tracking-wider text-white">Upload Files</h2>
+                  <p className="text-xs text-[#576575] font-mono mt-2 tracking-wide">Drag and drop file or click to browse files</p>
                   <span className="inline-block mt-4 text-[9px] text-[#576575] bg-white/5 border border-white/10 px-2 py-0.5 rounded font-mono uppercase font-bold tracking-widest">
                     MAX SIZE: 15MB | PE, DLL, ELF, ZIP, PDF, JS, bat, ps1
                   </span>
@@ -837,7 +837,7 @@ export default function Dashboard() {
               {/* Upload queue list */}
               {uploadQueue.length > 0 && (
                 <div className="bg-[#0b0f19]/60 border border-[#25a5ff]/15 p-6 rounded-2xl">
-                  <h3 className="text-xs font-bold font-mono uppercase text-[#576575] tracking-wider mb-6">Detonation Queue logs</h3>
+                  <h3 className="text-xs font-bold font-mono uppercase text-[#576575] tracking-wider mb-6">Upload Queue</h3>
                   <div className="space-y-4">
                     {uploadQueue.map((job) => (
                       <div key={job.id} className="p-4 rounded-xl bg-[#04060d] border border-white/5 flex items-center justify-between gap-4 font-mono text-xs">
@@ -848,7 +848,7 @@ export default function Dashboard() {
                             <span className="text-[10px] text-[#576575]">({job.size})</span>
                           </div>
                           
-                          {/* Progress/Step Pipeline states */}
+                          {/* Upload Progress */}
                           <div className="flex items-center gap-3">
                             <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded shrink-0 ${job.status === 'COMPLETED' ? 'bg-green-500/10 text-green-400' : job.status === 'FAILED' ? 'bg-red-500/10 text-red-400' : 'bg-yellow-500/10 text-yellow-400 animate-pulse'}`}>
                               {job.status === 'PROCESSING' ? job.status_detail : job.status}
@@ -907,14 +907,14 @@ export default function Dashboard() {
             <div className="space-y-8 animate-fadeIn">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-xl font-bold uppercase tracking-wider text-white">Threat Indicators feed</h2>
-                  <p className="text-xs text-[#576575] font-mono mt-1 uppercase">Attributed signature matching, domain hashes and active perimeter validation targets.</p>
+                  <h2 className="text-xl font-bold uppercase tracking-wider text-white">Threat Intelligence</h2>
+                  <p className="text-xs text-[#576575] font-mono mt-1 uppercase">View information about known malware and suspicious indicators.</p>
                 </div>
                 <input 
                   type="text" 
                   value={intelSearch}
                   onChange={(e) => setIntelSearch(e.target.value)}
-                  placeholder="FILTER INDICATOR..."
+                  placeholder="Filter Threats..."
                   className="bg-[#04060d] border border-[#25a5ff]/15 rounded-xl px-4 py-2 text-xs text-white placeholder-[#576575] outline-none font-mono focus:border-[#25a5ff]"
                 />
               </div>
@@ -924,12 +924,12 @@ export default function Dashboard() {
                   <table className="w-full text-left font-mono text-xs text-[#9aa4b2]">
                     <thead>
                       <tr className="border-b border-[#25a5ff]/15 bg-[#070913] text-[#576575]">
-                        <th className="p-4 uppercase">Indicator Value</th>
-                        <th className="p-4 uppercase">Type</th>
-                        <th className="p-4 uppercase">Threat Actor</th>
-                        <th className="p-4 uppercase">Malware Family</th>
-                        <th className="p-4 uppercase">Severity</th>
-                        <th className="p-4 uppercase">Telemetry Detail</th>
+                        <th className="p-4 uppercase">Suspicious Indicator</th>
+                        <th className="p-4 uppercase">Indicator Type</th>
+                        <th className="p-4 uppercase">Attacker</th>
+                        <th className="p-4 uppercase">Malware Type</th>
+                        <th className="p-4 uppercase">Threat Level</th>
+                        <th className="p-4 uppercase">Description</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -961,8 +961,8 @@ export default function Dashboard() {
             <div className="space-y-8 animate-fadeIn">
               <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-xl font-bold uppercase tracking-wider text-white">Scan Ledger Records</h2>
-                  <p className="text-xs text-[#576575] font-mono mt-1 uppercase">Historical registries of detonated binaries.</p>
+                  <h2 className="text-xl font-bold uppercase tracking-wider text-white">Analysis History</h2>
+                  <p className="text-xs text-[#576575] font-mono mt-1 uppercase">Review results of previously analyzed files.</p>
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-3">
@@ -970,7 +970,7 @@ export default function Dashboard() {
                     type="text" 
                     value={historySearch}
                     onChange={(e) => setHistorySearch(e.target.value)}
-                    placeholder="SEARCH LEDGER..."
+                    placeholder="Search Files..."
                     className="bg-[#04060d] border border-[#25a5ff]/15 rounded-xl px-4 py-2 text-xs text-white placeholder-[#576575] outline-none font-mono focus:border-[#25a5ff]"
                   />
                   <select 
@@ -978,7 +978,7 @@ export default function Dashboard() {
                     onChange={(e) => setHistoryFilter(e.target.value)}
                     className="bg-[#04060d] border border-[#25a5ff]/15 rounded-xl px-4 py-2 text-xs text-white outline-none font-mono text-center cursor-pointer"
                   >
-                    <option value="ALL">ALL VERDICTS</option>
+                    <option value="ALL">All Results</option>
                     <option value="MALICIOUS">MALICIOUS</option>
                     <option value="SUSPICIOUS">SUSPICIOUS</option>
                     <option value="CLEAN">CLEAN</option>
@@ -992,11 +992,11 @@ export default function Dashboard() {
                     <thead>
                       <tr className="border-b border-[#25a5ff]/15 bg-[#070913] text-[#576575]">
                         <th className="p-4 uppercase">File Name</th>
-                        <th className="p-4 uppercase">SHA-256 Signature</th>
-                        <th className="p-4 uppercase">Verdict</th>
-                        <th className="p-4 uppercase">Risk Score</th>
-                        <th className="p-4 uppercase">Detonation Time</th>
-                        <th className="p-4 uppercase text-right">Console Options</th>
+                        <th className="p-4 uppercase">File Hash (SHA-256)</th>
+                        <th className="p-4 uppercase">Final Result</th>
+                        <th className="p-4 uppercase">Threat Score</th>
+                        <th className="p-4 uppercase">Analysis Time</th>
+                        <th className="p-4 uppercase text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1053,22 +1053,22 @@ export default function Dashboard() {
             <div className="space-y-8 animate-fadeIn">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-xl font-bold uppercase tracking-wider text-white">Operator Alerts Queue</h2>
-                  <p className="text-xs text-[#576575] font-mono mt-1 uppercase">Live system telemetry alerts and notification counters.</p>
+                  <h2 className="text-xl font-bold uppercase tracking-wider text-white">Notifications</h2>
+                  <p className="text-xs text-[#576575] font-mono mt-1 uppercase">View system updates and threat alerts.</p>
                 </div>
                 {notifications.length > 0 && (
                   <button 
                     onClick={handleClearAllNotifications}
                     className="px-4 py-2 border border-red-500/30 text-red-400 hover:border-red-500 rounded-xl text-xs font-mono font-bold uppercase cursor-pointer transition-all"
                   >
-                    Clear All Alerts
+                    Clear All Notifications
                   </button>
                 )}
               </div>
 
               {notifications.length === 0 ? (
                 <div className="text-center py-16 bg-[#0b0f19]/30 border border-[#25a5ff]/15 rounded-3xl text-xs text-[#576575] font-mono">
-                  No notifications or system logs currently pending operator attention.
+                  No notifications or alerts currently available.
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1142,17 +1142,17 @@ export default function Dashboard() {
               {/* Verdict Summary Box */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-[#0b0f19]/70 border border-[#25a5ff]/15 p-6 rounded-2xl text-center flex flex-col justify-center">
-                  <span className="text-[10px] font-mono text-[#576575] uppercase tracking-wider font-bold mb-2">Verdict Classification</span>
+                  <span className="text-[10px] font-mono text-[#576575] uppercase tracking-wider font-bold mb-2">Final Result</span>
                   <span className={`text-3xl font-black ${selectedAnalysis.malware_classification.verdict === 'MALICIOUS' ? 'text-red-400' : selectedAnalysis.malware_classification.verdict === 'SUSPICIOUS' ? 'text-yellow-400' : 'text-green-400'}`}>
                     {selectedAnalysis.malware_classification.verdict}
                   </span>
                 </div>
                 <div className="bg-[#0b0f19]/70 border border-[#25a5ff]/15 p-6 rounded-2xl text-center flex flex-col justify-center">
-                  <span className="text-[10px] font-mono text-[#576575] uppercase tracking-wider font-bold mb-2">Risk Score Level</span>
+                  <span className="text-[10px] font-mono text-[#576575] uppercase tracking-wider font-bold mb-2">Threat Score</span>
                   <span className="text-3xl font-black">{selectedAnalysis.malware_classification.score}%</span>
                 </div>
                 <div className="bg-[#0b0f19]/70 border border-[#25a5ff]/15 p-6 rounded-2xl text-center flex flex-col justify-center">
-                  <span className="text-[10px] font-mono text-[#576575] uppercase tracking-wider font-bold mb-2">Entropy Metric</span>
+                  <span className="text-[10px] font-mono text-[#576575] uppercase tracking-wider font-bold mb-2">File Uniqueness (Entropy)</span>
                   <span className="text-3xl font-black">{selectedAnalysis.entropy}</span>
                 </div>
               </div>
@@ -1162,17 +1162,17 @@ export default function Dashboard() {
                 
                 {/* Structural boundaries */}
                 <div className="bg-[#0b0f19]/40 border border-white/5 p-6 rounded-2xl space-y-4 font-mono text-xs">
-                  <h4 className="text-[#25a5ff] font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2">File Indicators</h4>
+                  <h4 className="text-[#25a5ff] font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2">File Details</h4>
                   <div className="flex justify-between"><span className="text-[#576575]">File Size:</span> <span>{(selectedAnalysis.file_size_bytes / 1024).toFixed(1)} KB</span></div>
-                  <div className="flex justify-between"><span className="text-[#576575]">Compiler Signature:</span> <span className="text-white truncate max-w-xs">{selectedAnalysis.compiler_info}</span></div>
-                  <div className="flex justify-between"><span className="text-[#576575]">Digital Signature:</span> <span className="text-white">{selectedAnalysis.digital_signature}</span></div>
-                  <div className="flex justify-between"><span className="text-[#576575]">Is PE Header Valid:</span> <span>{selectedAnalysis.is_pe ? 'YES' : 'NO'}</span></div>
-                  <div className="flex justify-between"><span className="text-[#576575]">Scan Duration:</span> <span>{selectedAnalysis.scan_duration_seconds} seconds</span></div>
+                  <div className="flex justify-between"><span className="text-[#576575]">Compiler Type:</span> <span className="text-white truncate max-w-xs">{selectedAnalysis.compiler_info}</span></div>
+                  <div className="flex justify-between"><span className="text-[#576575]">Security Signature:</span> <span className="text-white">{selectedAnalysis.digital_signature}</span></div>
+                  <div className="flex justify-between"><span className="text-[#576575]">Is Windows Program:</span> <span>{selectedAnalysis.is_pe ? 'YES' : 'NO'}</span></div>
+                  <div className="flex justify-between"><span className="text-[#576575]">Analysis Duration:</span> <span>{selectedAnalysis.scan_duration_seconds} seconds</span></div>
                 </div>
 
                 {/* Hashes metadata */}
                 <div className="bg-[#0b0f19]/40 border border-white/5 p-6 rounded-2xl space-y-4 font-mono text-[11px]">
-                  <h4 className="text-[#25a5ff] font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2">Hash Telemetry</h4>
+                  <h4 className="text-[#25a5ff] font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2">File Hashes</h4>
                   <div><span className="text-[#576575] block uppercase">MD5:</span> <span className="text-white">{selectedAnalysis.hashes.md5}</span></div>
                   <div><span className="text-[#576575] block uppercase">SHA-1:</span> <span className="text-white">{selectedAnalysis.hashes.sha1}</span></div>
                   <div><span className="text-[#576575] block uppercase">SHA-256:</span> <span className="text-white">{selectedAnalysis.hashes.sha256}</span></div>
@@ -1184,9 +1184,9 @@ export default function Dashboard() {
                 
                 {/* Suspicious APIs */}
                 <div className="bg-[#0b0f19]/40 border border-white/5 p-6 rounded-2xl">
-                  <h4 className="text-[#25a5ff] font-mono font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2 mb-4">Suspicious Import API Callbacks</h4>
+                  <h4 className="text-[#25a5ff] font-mono font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2 mb-4">Suspicious Code Functions</h4>
                   {selectedAnalysis.suspicious_apis.length === 0 ? (
-                    <p className="text-xs text-[#576575] font-mono">No suspicious API calls identified in import table.</p>
+                    <p className="text-xs text-[#576575] font-mono">No suspicious code functions found.</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {selectedAnalysis.suspicious_apis.map((api, idx) => (
@@ -1198,9 +1198,9 @@ export default function Dashboard() {
 
                 {/* YARA signature hits */}
                 <div className="bg-[#0b0f19]/40 border border-white/5 p-6 rounded-2xl">
-                  <h4 className="text-[#25a5ff] font-mono font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2 mb-4">YARA Signatures Detected</h4>
+                  <h4 className="text-[#25a5ff] font-mono font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2 mb-4">YARA Signatures</h4>
                   {selectedAnalysis.yara_matches.length === 0 ? (
-                    <p className="text-xs text-[#576575] font-mono">No YARA signatures triggered for this payload.</p>
+                    <p className="text-xs text-[#576575] font-mono">No YARA signatures triggered.</p>
                   ) : (
                     <div className="space-y-2">
                       {selectedAnalysis.yara_matches.map((rule, idx) => (
@@ -1218,9 +1218,9 @@ export default function Dashboard() {
                 
                 {/* MITREATTACK */}
                 <div className="bg-[#0b0f19]/40 border border-white/5 p-6 rounded-2xl">
-                  <h4 className="text-[#25a5ff] font-mono font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2 mb-4">MITRE ATT&CK Mapping</h4>
+                  <h4 className="text-[#25a5ff] font-mono font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2 mb-4">Attack Techniques</h4>
                   {selectedAnalysis.mitre_attack.length === 0 ? (
-                    <p className="text-xs text-[#576575] font-mono">No specific ATT&CK matrices matched.</p>
+                    <p className="text-xs text-[#576575] font-mono">No attack techniques found.</p>
                   ) : (
                     <div className="space-y-2">
                       {selectedAnalysis.mitre_attack.map((t, idx) => (
@@ -1234,9 +1234,9 @@ export default function Dashboard() {
 
                 {/* Extracted IOCs */}
                 <div className="bg-[#0b0f19]/40 border border-white/5 p-6 rounded-2xl space-y-4 text-xs font-mono">
-                  <h4 className="text-[#25a5ff] font-mono font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2">Network & Registry IOCs</h4>
+                  <h4 className="text-[#25a5ff] font-mono font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2">Suspicious Indicators</h4>
                   <div>
-                    <span className="text-[#576575] block mb-1">C2 IPs ({selectedAnalysis.iocs.ips.length})</span>
+                    <span className="text-[#576575] block mb-1">Suspicious IP Addresses ({selectedAnalysis.iocs.ips.length})</span>
                     {selectedAnalysis.iocs.ips.length === 0 ? (
                       <span className="text-[#576575] text-[10px]">None identified</span>
                     ) : (
@@ -1246,7 +1246,7 @@ export default function Dashboard() {
                     )}
                   </div>
                   <div>
-                    <span className="text-[#576575] block mb-1">C2 Domains ({selectedAnalysis.iocs.domains.length})</span>
+                    <span className="text-[#576575] block mb-1">Suspicious Domains ({selectedAnalysis.iocs.domains.length})</span>
                     {selectedAnalysis.iocs.domains.length === 0 ? (
                       <span className="text-[#576575] text-[10px]">None identified</span>
                     ) : (
@@ -1260,7 +1260,7 @@ export default function Dashboard() {
 
               {/* Embedded strings scroll */}
               <div className="bg-[#0b0f19]/40 border border-white/5 p-6 rounded-2xl">
-                <h4 className="text-[#25a5ff] font-mono font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2 mb-4">Embedded Strings (First 50 ASCII strings)</h4>
+                <h4 className="text-[#25a5ff] font-mono font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2 mb-4">Embedded Strings (Found Text)</h4>
                 <div className="bg-[#04060d] border border-white/5 p-4 rounded-2xl h-48 overflow-y-auto font-mono text-[10px] text-[#9aa4b2] leading-relaxed">
                   {selectedAnalysis.embedded_strings.map((str, idx) => (
                     <div key={idx} className="hover:bg-white/5 px-2 py-0.5 rounded truncate">{str}</div>
@@ -1270,9 +1270,9 @@ export default function Dashboard() {
 
               {/* VirusTotal Reputations Section */}
               <div className="bg-[#0b0f19]/40 border border-white/5 p-6 rounded-2xl">
-                <h4 className="text-[#25a5ff] font-mono font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2 mb-4">VirusTotal Telemetry Integration</h4>
+                <h4 className="text-[#25a5ff] font-mono font-bold uppercase tracking-wider text-xs border-b border-[#25a5ff]/15 pb-2 mb-4">VirusTotal Results</h4>
                 {!selectedAnalysis.virus_total_report.positives ? (
-                  <p className="text-xs text-[#576575] font-mono">VirusTotal details empty. Provide a VirusTotal API Key in settings for live AV comparisons.</p>
+                  <p className="text-xs text-[#576575] font-mono">VirusTotal results empty. Provide a VirusTotal API Key in settings to compare findings.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-mono text-xs">
                     <div className="bg-white/5 p-4 rounded-xl">
@@ -1280,11 +1280,11 @@ export default function Dashboard() {
                       <span className="text-md font-bold text-red-400">{selectedAnalysis.virus_total_report.positives} / {selectedAnalysis.virus_total_report.total} AVs</span>
                     </div>
                     <div className="bg-white/5 p-4 rounded-xl">
-                      <span className="text-[#576575] block mb-1">Scans Details</span>
+                      <span className="text-[#576575] block mb-1">Scan Status</span>
                       <span className="text-md font-bold text-white truncate block">{selectedAnalysis.virus_total_report.scan_id ? 'Scan completed' : 'N/A'}</span>
                     </div>
                     <div className="bg-white/5 p-4 rounded-xl">
-                      <span className="text-[#576575] block mb-1">Result Summary</span>
+                      <span className="text-[#576575] block mb-1">Analysis Link</span>
                       <span className="text-md font-bold text-white">{selectedAnalysis.virus_total_report.permalink ? <a href={selectedAnalysis.virus_total_report.permalink} target="_blank" rel="noreferrer" className="text-[#25a5ff] hover:underline">Link to VT Page</a> : 'N/A'}</span>
                     </div>
                   </div>
@@ -1296,9 +1296,9 @@ export default function Dashboard() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#25a5ff]/15 pb-4">
                   <div>
                     <h4 className="text-sm font-bold font-mono uppercase text-[#25a5ff] tracking-wider flex items-center gap-2">
-                      <Terminal size={16} className="text-[#25a5ff]" /> Claude Autonomous SecOps Agent
+                      <Terminal size={16} className="text-[#25a5ff]" /> AI Security Assistant
                     </h4>
-                    <p className="text-[10px] text-[#576575] font-mono mt-1">OPERATOR MODE: FULL DUPLEX INTERACTIVE SHELL</p>
+                    <p className="text-[10px] text-[#576575] font-mono mt-1">Ask the AI to explain malware behavior and security findings.</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
@@ -1306,7 +1306,7 @@ export default function Dashboard() {
                       <span className={`relative inline-flex rounded-full h-2 w-2 ${isAiLoading ? 'bg-amber-500' : 'bg-green-500'}`}></span>
                     </span>
                     <span className="text-[10px] font-mono text-white tracking-wider">
-                      {isAiLoading ? 'CLAUDE_AGENT: INVESTIGATING...' : 'CLAUDE_AGENT: ONLINE'}
+                      {isAiLoading ? 'AI: ANALYZING...' : 'AI: READY'}
                     </span>
                   </div>
                 </div>
@@ -1314,7 +1314,7 @@ export default function Dashboard() {
                 {/* Claude Agent Debugger Console Logs (True Realtime Logs Feed) */}
                 <div className="bg-[#020408] border border-[#25a5ff]/15 rounded-xl p-4 font-mono text-[10px] text-green-400 h-32 overflow-y-auto space-y-1 shadow-[inset_0_0_15px_rgba(0,0,0,0.8)]">
                   <div className="text-white/40 border-b border-white/5 pb-1 mb-2 uppercase tracking-wider flex justify-between">
-                    <span>Agent Operations Auditor logs</span>
+                    <span>AI Activity Logs</span>
                     <span className="text-[9px] text-[#25a5ff]">PID: {Math.floor(Math.random() * 9000 + 1000)}</span>
                   </div>
                   {agentLogs.map((log, idx) => (
@@ -1327,7 +1327,7 @@ export default function Dashboard() {
 
                 {/* Interactive Preset Action Command Deck */}
                 <div className="space-y-2">
-                  <h5 className="text-[10px] font-mono font-bold uppercase text-[#576575] tracking-wider">Agent Preset Instruction Deck</h5>
+                  <h5 className="text-[10px] font-mono font-bold uppercase text-[#576575] tracking-wider">AI Actions</h5>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <button
                       type="button"
@@ -1335,8 +1335,8 @@ export default function Dashboard() {
                       onClick={() => executeAgentAction("/audit-apis", "Investigate all imported APIs and suspicious system calls. Highlight and explain functions related to evasion, injection, or networking.")}
                       className="bg-[#04060d] hover:bg-[#25a5ff]/10 border border-[#25a5ff]/20 hover:border-[#25a5ff]/50 px-3 py-2.5 rounded-xl text-left transition-all group disabled:opacity-50"
                     >
-                      <div className="text-[10px] font-mono font-bold text-white group-hover:text-[#25a5ff]">🔍 Audit APIs</div>
-                      <div className="text-[8px] text-[#576575] font-mono mt-0.5">Explain system call layers</div>
+                      <div className="text-[10px] font-mono font-bold text-white group-hover:text-[#25a5ff]">🔍 Audit Code</div>
+                      <div className="text-[8px] text-[#576575] font-mono mt-0.5">Explain suspicious functions</div>
                     </button>
                     <button
                       type="button"
@@ -1344,8 +1344,8 @@ export default function Dashboard() {
                       onClick={() => executeAgentAction("/yara-forge", "Generate a custom, production-ready YARA signature rule specifically tailored to detect this file's attributes (entropy, imports, strings) and include comments explaining each field.")}
                       className="bg-[#04060d] hover:bg-[#25a5ff]/10 border border-[#25a5ff]/20 hover:border-[#25a5ff]/50 px-3 py-2.5 rounded-xl text-left transition-all group disabled:opacity-50"
                     >
-                      <div className="text-[10px] font-mono font-bold text-white group-hover:text-[#25a5ff]">🛡️ YARA Forge</div>
-                      <div className="text-[8px] text-[#576575] font-mono mt-0.5">Write custom match signatures</div>
+                      <div className="text-[10px] font-mono font-bold text-white group-hover:text-[#25a5ff]">🛡️ YARA Rules</div>
+                      <div className="text-[8px] text-[#576575] font-mono mt-0.5">Write custom match rules</div>
                     </button>
                     <button
                       type="button"
@@ -1353,8 +1353,8 @@ export default function Dashboard() {
                       onClick={() => executeAgentAction("/mitre-map", "Perform a complete mapping of this file's attributes to the MITRE ATT&CK framework. Provide detailed explanations for each technique (e.g. Injection, Evasion) and suggest defensive counters.")}
                       className="bg-[#04060d] hover:bg-[#25a5ff]/10 border border-[#25a5ff]/20 hover:border-[#25a5ff]/50 px-3 py-2.5 rounded-xl text-left transition-all group disabled:opacity-50"
                     >
-                      <div className="text-[10px] font-mono font-bold text-white group-hover:text-[#25a5ff]">🚨 MITRE Map</div>
-                      <div className="text-[8px] text-[#576575] font-mono mt-0.5">Map techniques to ATT&CK</div>
+                      <div className="text-[10px] font-mono font-bold text-white group-hover:text-[#25a5ff]">🚨 Attack Techniques</div>
+                      <div className="text-[8px] text-[#576575] font-mono mt-0.5">Map code to attack techniques</div>
                     </button>
                     <button
                       type="button"
@@ -1362,20 +1362,20 @@ export default function Dashboard() {
                       onClick={() => executeAgentAction("/remediate", "Write an actionable remediation playbook script (PowerShell or Bash) to clean up files, registry keys, and processes that this malware might spawn.")}
                       className="bg-[#04060d] hover:bg-[#25a5ff]/10 border border-[#25a5ff]/20 hover:border-[#25a5ff]/50 px-3 py-2.5 rounded-xl text-left transition-all group disabled:opacity-50"
                     >
-                      <div className="text-[10px] font-mono font-bold text-white group-hover:text-[#25a5ff]">🧪 Remediate</div>
-                      <div className="text-[8px] text-[#576575] font-mono mt-0.5">Build script to clean malware</div>
+                      <div className="text-[10px] font-mono font-bold text-white group-hover:text-[#25a5ff]">🧪 How to Fix</div>
+                      <div className="text-[8px] text-[#576575] font-mono mt-0.5">Create clean up script</div>
                     </button>
                   </div>
                 </div>
 
                 {/* Conversation Panel */}
                 <div className="space-y-4 pt-2">
-                  <h5 className="text-[10px] font-mono font-bold uppercase text-[#576575] tracking-wider">SecOps Copilot Logs & Dialogues</h5>
+                  <h5 className="text-[10px] font-mono font-bold uppercase text-[#576575] tracking-wider">AI Chat History</h5>
                   
                   <div className="space-y-4 max-h-96 overflow-y-auto p-4 bg-[#04060d] border border-white/5 rounded-2xl text-xs">
                     {/* Render initial report message as baseline */}
                     <div className="bg-white/5 text-[#9aa4b2] p-4 rounded-xl mr-auto text-left whitespace-pre-wrap font-sans border border-white/5">
-                      <span className="block text-[8px] text-[#25a5ff] mb-2 font-mono font-bold uppercase">🚨 BASELINE INTEL PLAYBOOK REPORT</span>
+                      <span className="block text-[8px] text-[#25a5ff] mb-2 font-mono font-bold uppercase">🚨 AI Analysis Summary</span>
                       {selectedAnalysis.ai_generated_report || "No initial playbook generated."}
                     </div>
 
@@ -1383,7 +1383,7 @@ export default function Dashboard() {
                     {aiReportChat.map((msg, i) => (
                       <div key={i} className={`p-4 rounded-xl max-w-2xl border ${msg.role === 'user' ? 'bg-[#25a5ff]/5 border-[#25a5ff]/30 ml-auto text-right text-white font-mono' : 'bg-white/5 border-white/5 text-[#9aa4b2] mr-auto text-left whitespace-pre-wrap font-sans'}`}>
                         <span className="block text-[8px] text-[#576575] mb-2 font-mono font-bold uppercase">
-                          {msg.role === 'user' ? 'OPERATOR' : 'CLAUDE_SECOPS_AGENT'}
+                          {msg.role === 'user' ? 'USER' : 'AI ASSISTANT'}
                         </span>
                         {msg.text}
                       </div>
@@ -1394,7 +1394,7 @@ export default function Dashboard() {
                         <span className="animate-bounce">●</span>
                         <span className="animate-bounce [animation-delay:0.2s]">●</span>
                         <span className="animate-bounce [animation-delay:0.4s]">●</span>
-                        <span>Claude Agent is assessing threat payload...</span>
+                        <span>AI is analyzing file details...</span>
                       </div>
                     )}
                   </div>
@@ -1734,8 +1734,8 @@ function WorldThreatGlobe() {
   return (
     <div className="space-y-8 animate-fadeIn">
       <div>
-        <h2 className="text-xl font-bold uppercase tracking-wider text-white">3D Threat Detonation Globe</h2>
-        <p className="text-xs text-[#576575] font-mono mt-1 uppercase">Autonomous agent scanning and global malware arc transmissions in 3D wireframe.</p>
+        <h2 className="text-xl font-bold uppercase tracking-wider text-white">3D Threat Globe</h2>
+        <p className="text-xs text-[#576575] font-mono mt-1 uppercase">View simulated malware threat activity on a rotating 3D globe.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -1745,7 +1745,7 @@ function WorldThreatGlobe() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#25a5ff] opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#25a5ff]"></span>
             </span>
-            <span>Real-time Outbreak Detonator</span>
+            <span>Real-time Threat Activity</span>
           </div>
 
           <canvas 
@@ -1765,7 +1765,7 @@ function WorldThreatGlobe() {
         <div className="lg:col-span-5 flex flex-col gap-6">
           <div className="bg-[#020408]/90 border border-[#25a5ff]/20 rounded-3xl p-5 flex flex-col h-[200px] shadow-[0_0_20px_rgba(0,0,0,0.8)]">
             <h4 className="text-[10px] font-mono font-bold text-white uppercase tracking-wider border-b border-[#25a5ff]/15 pb-2 mb-3 flex items-center justify-between">
-              <span className="flex items-center gap-1.5"><Terminal size={12} className="text-[#25a5ff]" /> Map Agent Auditor Console</span>
+              <span className="flex items-center gap-1.5"><Terminal size={12} className="text-[#25a5ff]" /> AI Security Assistant Console</span>
               <span className="text-green-500 text-[8px] animate-pulse">● SECURE GATEWAY</span>
             </h4>
             <div className="flex-1 overflow-y-auto font-mono text-[9px] text-green-400 space-y-1 scrollbar-none leading-relaxed">
@@ -1779,7 +1779,7 @@ function WorldThreatGlobe() {
           </div>
 
           <div className="bg-[#050711]/60 border border-[#25a5ff]/15 rounded-3xl p-5 flex flex-col h-[200px] shadow-[0_0_20px_rgba(0,0,0,0.3)]">
-            <h4 className="text-[10px] font-mono font-bold text-[#576575] uppercase tracking-wider border-b border-white/5 pb-2 mb-3">Live Outbreak Transmission Feed</h4>
+            <h4 className="text-[10px] font-mono font-bold text-[#576575] uppercase tracking-wider border-b border-white/5 pb-2 mb-3">Threat Activity Feed</h4>
             <div className="flex-1 overflow-y-auto space-y-2 font-mono text-[10px] scrollbar-none">
               {worldLogs.length === 0 ? (
                 <div className="text-center py-10 text-[#576575]">Waiting for transmissions...</div>

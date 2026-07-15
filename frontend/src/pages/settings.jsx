@@ -93,15 +93,15 @@ export default function Settings() {
               <SettingsIcon size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-black uppercase tracking-wider">Console Config</h1>
-              <p className="text-[10px] text-[#576575] font-mono uppercase tracking-widest font-black">Operator Telemetry Settings</p>
+              <h1 className="text-2xl font-black uppercase tracking-wider">Settings</h1>
+              <p className="text-[10px] text-[#576575] font-mono uppercase tracking-widest font-black">Application Settings</p>
             </div>
           </div>
           <button 
             onClick={() => navigate('/dashboard')} 
             className="px-4 py-2.5 bg-[#0a0f1d] border border-white/5 hover:border-[#25a5ff]/30 text-xs font-mono font-bold uppercase rounded-xl flex items-center gap-2 transition-all cursor-pointer text-gray-400 hover:text-white"
           >
-            <ArrowLeft size={14} /> Back to Grid
+            <ArrowLeft size={14} /> Back to Dashboard
           </button>
         </header>
 
@@ -122,14 +122,14 @@ export default function Settings() {
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Key Configurations */}
           <div className="space-y-6">
-            <h3 className="text-xs font-mono font-black text-[#25a5ff] uppercase tracking-widest border-b border-[#25a5ff]/10 pb-2">Cryptography Keys Store</h3>
+            <h3 className="text-xs font-mono font-black text-[#25a5ff] uppercase tracking-widest border-b border-[#25a5ff]/10 pb-2">Connected Services & API Keys</h3>
             
             {/* VirusTotal Key Input */}
             <div className="space-y-2">
               <div className="flex justify-between items-center text-xs">
                 <label className="font-mono uppercase text-gray-400 font-bold flex items-center gap-1"><Key size={14}/> VirusTotal API Key</label>
                 <span className={`text-[9px] font-mono px-2 py-0.5 rounded ${vtConfigured ? 'bg-emerald-500/10 text-emerald-400' : 'bg-yellow-500/10 text-yellow-400'}`}>
-                  {vtConfigured ? '🟢 KEY CONFIGURED' : '🟡 UNCONFIGURED'}
+                  {vtConfigured ? '🟢 Active' : '🟡 Not Connected'}
                 </span>
               </div>
               <div className="relative">
@@ -155,7 +155,7 @@ export default function Settings() {
               <div className="flex justify-between items-center text-xs">
                 <label className="font-mono uppercase text-gray-400 font-bold flex items-center gap-1"><Key size={14}/> Anthropic Claude API Key</label>
                 <span className={`text-[9px] font-mono px-2 py-0.5 rounded ${claudeConfigured ? 'bg-emerald-500/10 text-emerald-400' : 'bg-yellow-500/10 text-yellow-400'}`}>
-                  {claudeConfigured ? '🟢 KEY CONFIGURED' : '🟡 UNCONFIGURED'}
+                  {claudeConfigured ? '🟢 Active' : '🟡 Not Connected'}
                 </span>
               </div>
               <div className="relative">
@@ -198,8 +198,8 @@ export default function Settings() {
 
             <div className="flex items-center justify-between py-2 text-xs">
               <div>
-                <p className="font-mono uppercase text-gray-200 font-bold">Heuristic Notifications</p>
-                <p className="text-[10px] text-gray-400">Enable instant warning logs for malicious ingests.</p>
+                <p className="font-mono uppercase text-gray-200 font-bold">Heuristic Alerts</p>
+                <p className="text-[10px] text-gray-400">Enable instant warnings for malicious file uploads.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -219,7 +219,7 @@ export default function Settings() {
             disabled={loading}
             className="w-full py-4 bg-gradient-to-r from-[#1e3a8a] to-[#25a5ff] text-white font-mono font-bold uppercase text-xs rounded-xl shadow-[0_4px_20px_rgba(37,165,255,0.2)] hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer border border-[#25a5ff]/20"
           >
-            <Save size={16} /> {loading ? 'Synchronizing configuration...' : 'Commit Configurations'}
+            <Save size={16} /> {loading ? 'Saving settings...' : 'Save Settings'}
           </button>
         </form>
       </div>

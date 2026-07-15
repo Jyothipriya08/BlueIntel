@@ -42,11 +42,11 @@ export default function Landing() {
           <div className="hidden md:flex space-x-8 font-mono text-xs uppercase tracking-wider text-[#576575]">
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <a href="#workflow" className="hover:text-white transition-colors">Workflow</a>
-            <a href="#metrics" className="hover:text-white transition-colors">Telemetry</a>
+            <a href="#metrics" className="hover:text-white transition-colors">Activity</a>
           </div>
           <div className="flex items-center space-x-4">
             <button onClick={() => navigate('/dashboard')} className="px-5 py-2.5 text-xs font-mono font-bold uppercase tracking-widest bg-gradient-to-r from-[#1e3a8a] to-[#25a5ff] text-white rounded-xl shadow-[0_4px_20px_rgba(37,165,255,0.2)] hover:scale-105 transition-all cursor-pointer">
-              Launch Console
+              Launch Control Panel
             </button>
           </div>
         </div>
@@ -66,7 +66,7 @@ export default function Landing() {
           </p>
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
             <button onClick={() => navigate('/dashboard')} className="w-full sm:w-auto px-8 py-4 font-mono font-bold uppercase tracking-widest text-xs rounded-xl bg-[#25a5ff] text-black hover:bg-white hover:shadow-[0_0_30px_#25a5ff] transition-all flex items-center justify-center gap-2 group cursor-pointer">
-              Access Security Console <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              Access Control Panel <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
         </div>
@@ -75,14 +75,14 @@ export default function Landing() {
       {/* Enterprise Features Grid */}
       <section id="features" className="py-32 max-w-7xl mx-auto px-6 relative z-10 border-t border-white/5">
         <div className="text-center space-y-3 mb-20">
-          <p className="text-[10px] font-mono font-black tracking-widest text-[#25a5ff] uppercase">Core Capability Blueprint</p>
-          <h2 className="text-3xl font-black uppercase tracking-wider">Defensive Tactical Architecture</h2>
+          <p className="text-[10px] font-mono font-black tracking-widest text-[#25a5ff] uppercase">Core Capabilities</p>
+          <h2 className="text-3xl font-black uppercase tracking-wider">Platform Capabilities</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { title: 'Static Malware Analysis', desc: 'Instant binary structural parsing, IAT hook mapping, section validation, and hash extraction.', icon: Binary },
-            { title: 'AI Threat Classification', desc: 'Direct compilation of reverse-engineered telemetry via advanced neural logic blocks.', icon: Brain },
-            { title: 'YARA Detection Layer', desc: 'Automated signature string pattern discovery leveraging standard execution rulesets.', icon: ShieldAlert },
+            { title: 'Static Analysis', desc: 'Instant binary structural parsing, import details, section validation, and hash extraction.', icon: Binary },
+            { title: 'AI Threat Analysis', desc: 'Direct compilation of reverse-engineered file metadata via advanced neural logic blocks.', icon: Brain },
+            { title: 'YARA Detection', desc: 'Automated signature string pattern discovery leveraging standard execution rulesets.', icon: ShieldAlert },
           ].map((feat, idx) => {
             const Icon = feat.icon;
             return (
@@ -101,11 +101,11 @@ export default function Landing() {
       {/* Timeline Workflow Section */}
       <section id="workflow" className="py-32 max-w-5xl mx-auto px-6 relative z-10 border-t border-white/5">
         <div className="text-center space-y-3 mb-20">
-          <p className="text-[10px] font-mono font-black tracking-widest text-[#25a5ff] uppercase">Telemetry Pipeline</p>
-          <h2 className="text-3xl font-black uppercase tracking-wider">Ingestion Workflow Timeline</h2>
+          <p className="text-[10px] font-mono font-black tracking-widest text-[#25a5ff] uppercase">Analysis Process</p>
+          <h2 className="text-3xl font-black uppercase tracking-wider">Analysis Timeline</h2>
         </div>
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 font-mono text-xs">
-          {['Upload File Asset', 'Deconstruct Data Arrays', 'AI Engine Classification', 'Threat Intelligence Sync', 'Generate Security Playbook'].map((step, i) => (
+          {['Upload File', 'Extract File Details', 'AI Threat Analysis', 'Check Known Threats', 'Generate AI Summary'].map((step, i) => (
             <React.Fragment key={i}>
               <div className="bg-[#090d16]/70 border border-[#25a5ff]/20 px-5 py-4 rounded-xl shadow-md font-bold text-center min-w-[180px]">
                 <span className="text-[#25a5ff] block mb-1">NODE 0{i+1}</span>
@@ -122,22 +122,22 @@ export default function Landing() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center font-mono">
           <div className="space-y-2">
             <h4 className="text-4xl font-black text-[#25a5ff] tracking-tight">{metrics.analyzed.toLocaleString()}</h4>
-            <p className="text-[10px] text-[#576575] uppercase font-black tracking-widest">Files Analyzed Cash</p>
+            <p className="text-[10px] text-[#576575] uppercase font-black tracking-widest">Files Analyzed</p>
           </div>
           <div className="space-y-2">
             <h4 className="text-4xl font-black text-red-400 tracking-tight">{metrics.detected.toLocaleString()}</h4>
-            <p className="text-[10px] text-[#576575] uppercase font-black tracking-widest">Threat Signatures Discovered</p>
+            <p className="text-[10px] text-[#576575] uppercase font-black tracking-widest">Threats Detected</p>
           </div>
           <div className="space-y-2">
             <h4 className="text-4xl font-black text-emerald-400 tracking-tight">{metrics.accuracy.toFixed(2)}%</h4>
-            <p className="text-[10px] text-[#576575] uppercase font-black tracking-widest">Detection Accuracy Delta</p>
+            <p className="text-[10px] text-[#576575] uppercase font-black tracking-widest">Detection Accuracy</p>
           </div>
         </div>
       </section>
 
       {/* Footer */}
       <footer className="border-t border-white/5 bg-[#03050a] py-12 text-center text-xs font-mono text-[#576575] relative z-10">
-        <p className="tracking-widest uppercase">© 2026 BLUEINTEL PLATFORM ENGINE. ALL GLOBAL TELEMETRY SECURITY RESERVED.</p>
+        <p className="tracking-widest uppercase">© 2026 BLUEINTEL PLATFORM. ALL RIGHTS RESERVED.</p>
       </footer>
     </div>
   );
