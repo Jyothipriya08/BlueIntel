@@ -439,7 +439,14 @@ def process_malware_file_async(log_id, file_data, vt_key, anthropic_key):
                 )
                 ai_report_text = message.content[0].text
             except Exception as e:
-                ai_report_text = f"AI Generator connection issue: {str(e)}"
+                error_msg = str(e)
+                if "credit balance" in error_msg.lower() or "billing" in error_msg.lower():
+                    ai_report_text = (
+                        "⚠️ Anthropic Claude API Billing Issue: The configured API key has an insufficient credit balance. "
+                        "Please fund your Anthropic Console account or update your API Key under the Settings console tab to resume operations."
+                    )
+                else:
+                    ai_report_text = f"AI Generator connection issue: {error_msg}"
         else:
             ai_report_text = "Anthropic Claude API Key not configured. AI Playbook generation bypassed."
             
@@ -939,7 +946,14 @@ class AIThreatReportView(APIView):
             return Response({"report": ai_response_text}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({"error": f"AI Engine Connection Pipeline Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            error_msg = str(e)
+            if "credit balance" in error_msg.lower() or "billing" in error_msg.lower():
+                friendly_err = (
+                    "⚠️ Anthropic Claude API Billing Issue: The configured API key has an insufficient credit balance. "
+                    "Please fund your Anthropic Console account or update your API Key under the Settings console tab to resume operations."
+                )
+                return Response({"error": friendly_err}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": f"AI Engine Connection Pipeline Error: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -1136,7 +1150,14 @@ class AICopilotChatView(APIView):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({"error": f"AI Security Assistant Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            error_msg = str(e)
+            if "credit balance" in error_msg.lower() or "billing" in error_msg.lower():
+                friendly_err = (
+                    "⚠️ Anthropic Claude API Billing Issue: The configured API key has an insufficient credit balance. "
+                    "Please fund your Anthropic Console account or update your API Key under the Settings console tab to resume operations."
+                )
+                return Response({"error": friendly_err}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": f"AI Security Assistant Error: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @method_decorator(csrf_exempt, name='dispatch')

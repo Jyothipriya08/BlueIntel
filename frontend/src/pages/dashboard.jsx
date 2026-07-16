@@ -808,6 +808,12 @@ export default function Dashboard() {
             <Database size={16} /> Analysis History
           </button>
           <button 
+            onClick={() => setActiveTab('ai_assistant')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold font-mono uppercase tracking-wider cursor-pointer transition-all ${activeTab === 'ai_assistant' ? 'bg-[#25a5ff]/10 text-white border-l-2 border-[#25a5ff]' : 'text-[#576575] hover:text-white hover:bg-white/5'}`}
+          >
+            <Terminal size={16} /> AI Security Assistant
+          </button>
+          <button 
             onClick={() => setActiveTab('activity_history')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold font-mono uppercase tracking-wider cursor-pointer transition-all ${activeTab === 'activity_history' ? 'bg-[#25a5ff]/10 text-white border-l-2 border-[#25a5ff]' : 'text-[#576575] hover:text-white hover:bg-white/5'}`}
           >
@@ -1475,6 +1481,178 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* AI SECURITY ASSISTANT STANDALONE CHAT TAB */}
+          {activeTab === 'ai_assistant' && (
+            <div className="space-y-8 animate-fadeIn">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#25a5ff]/15 pb-4">
+                <div>
+                  <h2 className="text-xl font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                    <Terminal size={20} className="text-[#25a5ff]" /> AI Security Assistant
+                  </h2>
+                  <p className="text-xs text-[#576575] font-mono mt-1 uppercase">Conversational SecOps Analyst and Malware Detonation Assistant.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Clear Chat Button */}
+                  {aiReportChat.length > 0 && (
+                    <button 
+                      type="button"
+                      onClick={clearChatHistory}
+                      className="px-4 py-2 border border-red-500/30 hover:border-red-500 text-red-400 rounded-xl text-xs font-mono font-bold uppercase cursor-pointer transition-all"
+                    >
+                      Clear Chat
+                    </button>
+                  )}
+                  {/* Context File Selector */}
+                  <div className="flex items-center gap-2 bg-[#04060d] border border-[#25a5ff]/15 rounded-xl px-3 py-2">
+                    <span className="text-[10px] font-mono text-[#576575] uppercase font-bold">Context:</span>
+                    <select 
+                      value={selectedAnalysis ? selectedAnalysis.id : 'NONE'}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        if (val === 'NONE') {
+                          setSelectedAnalysis(null);
+                        } else {
+                          const res = await fetch(`${API_BASE}/api/v1/scan-status/${val}/`);
+                          if (res.ok) {
+                            const data = await res.json();
+                            setSelectedAnalysis(data);
+                          }
+                        }
+                      }}
+                      className="bg-transparent text-xs text-white outline-none font-mono cursor-pointer max-w-[200px]"
+                    >
+                      <option value="NONE" className="bg-[#04060d]">General Platform Context</option>
+                      {scanHistory.map(item => (
+                        <option key={item.id} value={item.id} className="bg-[#04060d]">{item.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Layout Split: Chat & System Log Monitor */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* System Activity logs terminal feed */}
+                <div className="space-y-4">
+                  <h5 className="text-[10px] font-mono font-bold uppercase text-[#576575] tracking-wider">AI Activity Logs</h5>
+                  <div className="bg-[#020408] border border-[#25a5ff]/15 rounded-2xl p-4 font-mono text-[10px] text-green-400 h-64 overflow-y-auto space-y-1 shadow-[inset_0_0_15px_rgba(0,0,0,0.8)]">
+                    <div className="text-white/40 border-b border-white/5 pb-1 mb-2 uppercase tracking-wider flex justify-between">
+                      <span>Activity Log</span>
+                      <span className="text-[9px] text-[#25a5ff]">SESSION: {sessionId.substring(0, 8)}</span>
+                    </div>
+                    {agentLogs.map((log, idx) => (
+                      <div key={idx} className="leading-relaxed whitespace-pre-wrap">{log}</div>
+                    ))}
+                    {isAiLoading && (
+                      <div className="animate-pulse text-[#25a5ff]">&gt;&gt; [PENDING] Dispatching request context vectors...</div>
+                    )}
+                  </div>
+
+                  {/* Preset Action commands */}
+                  <h5 className="text-[10px] font-mono font-bold uppercase text-[#576575] tracking-wider pt-2">AI Copilot Actions</h5>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    <button
+                      type="button"
+                      disabled={isAiLoading}
+                      onClick={() => executeAgentAction("/explain-malware", "Compile a simple, easy-to-understand explanation of the selected malware report context. Highlight risks, score rating, and technical family info.")}
+                      className="bg-[#0b0f19]/60 hover:bg-[#25a5ff]/10 border border-[#25a5ff]/20 hover:border-[#25a5ff]/50 px-3 py-2.5 rounded-xl text-left transition-all group disabled:opacity-50"
+                    >
+                      <div className="text-[10px] font-mono font-bold text-white group-hover:text-[#25a5ff]">🛡️ Explain Malware</div>
+                      <div className="text-[8px] text-[#576575] font-mono mt-0.5">Summary of threat findings</div>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isAiLoading}
+                      onClick={() => executeAgentAction("/yara-rules", "Write custom matching detection rules and YARA signatures specifically optimized for the indicators in this log.")}
+                      className="bg-[#0b0f19]/60 hover:bg-[#25a5ff]/10 border border-[#25a5ff]/20 hover:border-[#25a5ff]/50 px-3 py-2.5 rounded-xl text-left transition-all group disabled:opacity-50"
+                    >
+                      <div className="text-[10px] font-mono font-bold text-white group-hover:text-[#25a5ff]">🔍 Generate YARA Rules</div>
+                      <div className="text-[8px] text-[#576575] font-mono mt-0.5">Tailored threat signatures</div>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isAiLoading}
+                      onClick={() => executeAgentAction("/mitigate-remove", "Suggest actionable cleanup scripts, remove procedures, and remediation steps to contain and delete this malware.")}
+                      className="bg-[#0b0f19]/60 hover:bg-[#25a5ff]/10 border border-[#25a5ff]/20 hover:border-[#25a5ff]/50 px-3 py-2.5 rounded-xl text-left transition-all group disabled:opacity-50"
+                    >
+                      <div className="text-[10px] font-mono font-bold text-white group-hover:text-[#25a5ff]">🧪 How to Contain & Fix</div>
+                      <div className="text-[8px] text-[#576575] font-mono mt-0.5">Removal and remediation steps</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Main Chat Interface */}
+                <div className="lg:col-span-2 bg-[#0b0f19]/60 border border-[#25a5ff]/15 rounded-2xl p-6 flex flex-col h-[550px]">
+                  {/* Chat messages lists container */}
+                  <div className="flex-1 overflow-y-auto space-y-4 pr-2 mb-4">
+                    {/* Baseline helper card if empty */}
+                    {aiReportChat.length === 0 && (
+                      <div className="p-6 bg-[#04060d] border border-white/5 rounded-2xl space-y-3 text-center py-12">
+                        <Terminal size={32} className="text-[#25a5ff]/40 mx-auto" />
+                        <h4 className="text-white font-bold font-sans text-sm">Secure AI Assistant Terminal</h4>
+                        <p className="text-xs text-[#576575] leading-relaxed max-w-md mx-auto">
+                          Ask questions about uploaded malware files, threat intelligence records, or general security concepts. Selecting a file context updates prompt relevance.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Dynamic chats */}
+                    {aiReportChat.map((msg, i) => (
+                      <div key={i} className={`p-4 rounded-xl border ${msg.role === 'user' ? 'bg-[#25a5ff]/5 border-[#25a5ff]/30 ml-auto text-right text-white font-mono max-w-md' : 'bg-white/5 border-white/5 text-[#9aa4b2] mr-auto text-left w-full'}`}>
+                        <div className="flex justify-between items-start gap-4 mb-2 font-mono">
+                          <span className="block text-[8px] text-[#576575] font-bold uppercase">
+                            {msg.role === 'user' ? 'USER' : 'AI ASSISTANT'}
+                          </span>
+                          {msg.role === 'assistant' && (
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(msg.text)}
+                              className="text-[9px] text-[#576575] hover:text-white cursor-pointer transition-colors"
+                              title="Copy AI response"
+                            >
+                              [COPY]
+                            </button>
+                          )}
+                        </div>
+                        <div className="text-xs leading-relaxed">
+                          {msg.role === 'user' ? parseInlineStyles(msg.text) : renderMarkdown(msg.text)}
+                        </div>
+                      </div>
+                    ))}
+
+                    {isAiLoading && (
+                      <div className="flex items-center gap-2 text-xs text-[#576575] font-mono bg-white/5 p-4 rounded-xl mr-auto border border-white/5">
+                        <span className="animate-bounce">●</span>
+                        <span className="animate-bounce [animation-delay:0.2s]">●</span>
+                        <span className="animate-bounce [animation-delay:0.4s]">●</span>
+                        <span>AI Assistant is compiling report findings...</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Input Command Bar */}
+                  <form onSubmit={submitAiQuestion} className="flex gap-3 pt-4 border-t border-white/5">
+                    <input 
+                      type="text"
+                      value={aiReportQuery}
+                      onChange={(e) => setAiReportQuery(e.target.value)}
+                      placeholder={selectedAnalysis ? `ASK AI ABOUT ${selectedAnalysis.file_name.toUpperCase()}...` : "ASK A GENERAL SECURITY OR ANALYSIS QUESTION..."}
+                      className="flex-1 bg-[#04060d] border border-[#25a5ff]/20 rounded-xl px-4 py-3 text-xs text-white placeholder-[#576575] focus:border-[#25a5ff] outline-none font-mono tracking-wide"
+                    />
+                    <button 
+                      type="submit" 
+                      disabled={isAiLoading || !aiReportQuery.trim()}
+                      className="px-5 bg-[#25a5ff] text-black font-bold font-mono uppercase tracking-wider text-[10px] rounded-xl cursor-pointer hover:bg-white transition-all disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <span>EXECUTE</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
             </div>
           )}
 
