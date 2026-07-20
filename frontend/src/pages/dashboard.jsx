@@ -259,6 +259,44 @@ export default function Dashboard() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, fileType, dateRange, riskLevel, scanStatus, malwareType, fileSize, sortOrder]);
 
+  // Polling fallback for active queue items in PROCESSING state
+  useEffect(() => {
+    const processingItems = uploadQueue.filter(item => item.status === 'PROCESSING' && item.logId);
+    if (processingItems.length === 0) return;
+
+    const interval = setInterval(async () => {
+      for (const item of processingItems) {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/scan-status/${item.logId}/`);
+          if (res.ok) {
+            const data = await res.json();
+            setUploadQueue(prev => prev.map(qItem => {
+              if (qItem.logId === item.logId) {
+                return {
+                  ...qItem,
+                  status: data.status,
+                  status_detail: data.status_detail,
+                  result: data.status === 'COMPLETED' ? data : null
+                };
+              }
+              return qItem;
+            }));
+            if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+              fetchHistoryLedger();
+              fetchStats();
+              fetchNotifications();
+              fetchActivities();
+            }
+          }
+        } catch (err) {
+          console.error("Polling sync error:", err);
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [uploadQueue]);
+
   const fetchThreatFeeds = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/v1/threat-intelligence/`);
@@ -505,8 +543,8 @@ export default function Dashboard() {
         setSelectedAnalysis(data);
         setAiReportChat([]);
         setAgentLogs([
-          `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Autonomous SecOps workspace initialized.`,
-          `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Ready for operator commands.`
+          `[${new Date().toLocaleTimeString()}] GEMINI_AGENT: Autonomous SecOps workspace initialized.`,
+          `[${new Date().toLocaleTimeString()}] GEMINI_AGENT: Ready for operator commands.`
         ]);
         setIsDetailModalOpen(true);
       }
@@ -592,7 +630,7 @@ export default function Dashboard() {
         setAiReportChat([]);
         setAgentLogs(prev => [
           ...prev,
-          `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Conversation audit records cleared.`
+          `[${new Date().toLocaleTimeString()}] GEMINI_AGENT: Conversation audit records cleared.`
         ]);
       }
     } catch (err) {
@@ -627,7 +665,7 @@ export default function Dashboard() {
       ...prev,
       `[${new Date().toLocaleTimeString()}] USER: "${userText}"`,
       `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Fetching threat database contexts...`,
-      `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Querying Anthropic Claude API...`
+      `[${new Date().toLocaleTimeString()}] AI_ASSISTANT: Querying Google Gemini API...`
     ]);
 
     try {
@@ -1899,7 +1937,7 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Claude SecOps Autonomous AI Agent Workspace */}
+              {/* Gemini SecOps Autonomous AI Agent Workspace */}
               <div className="bg-[#0b0f19]/60 border border-[#25a5ff]/25 p-6 rounded-2xl space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#25a5ff]/15 pb-4">
                   <div>
@@ -1930,7 +1968,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Claude Agent Debugger Console Logs (True Realtime Logs Feed) */}
+                {/* Gemini Agent Debugger Console Logs (True Realtime Logs Feed) */}
                 <div className="bg-[#020408] border border-[#25a5ff]/15 rounded-xl p-4 font-mono text-[10px] text-green-400 h-32 overflow-y-auto space-y-1 shadow-[inset_0_0_15px_rgba(0,0,0,0.8)]">
                   <div className="text-white/40 border-b border-white/5 pb-1 mb-2 uppercase tracking-wider flex justify-between">
                     <span>AI Activity Logs</span>
@@ -1940,7 +1978,7 @@ export default function Dashboard() {
                     <div key={idx} className="leading-relaxed whitespace-pre-wrap">{log}</div>
                   ))}
                   {isAiLoading && (
-                    <div className="animate-pulse text-[#25a5ff]">&gt;&gt; [PENDING] Sending secure REST call to Claude Node...</div>
+                    <div className="animate-pulse text-[#25a5ff]">&gt;&gt; [PENDING] Sending secure REST call to Gemini Node...</div>
                   )}
                 </div>
 
@@ -2075,7 +2113,6 @@ export default function Dashboard() {
     </div>
   );
 }
-
 function WorldThreatGlobe() {
   const canvasRef = React.useRef(null);
   const [worldLogs, setWorldLogs] = useState([
@@ -2084,7 +2121,7 @@ function WorldThreatGlobe() {
   ]);
   
   const [agentMapLogs, setAgentMapLogs] = useState([
-    `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Listening on global attack vectors...`
+    `[${new Date().toLocaleTimeString()}] GEMINI_AGENT: Listening on global attack vectors...`
   ]);
   const [isAgentMapLoading, setIsAgentMapLoading] = useState(false);
   const [selectedThreatLog, setSelectedThreatLog] = useState(null);
@@ -2097,8 +2134,8 @@ function WorldThreatGlobe() {
     setAgentMapLogs(prev => [
       ...prev,
       `[${new Date().toLocaleTimeString()}] COMMAND: /investigate_threat --actor "${log.actor}" --target "${log.target}"`,
-      `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Fetching intelligence briefs for ${log.actor}...`,
-      `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Mapping TTP signatures to historical outbreaks...`
+      `[${new Date().toLocaleTimeString()}] GEMINI_AGENT: Fetching intelligence briefs for ${log.actor}...`,
+      `[${new Date().toLocaleTimeString()}] GEMINI_AGENT: Mapping TTP signatures to historical outbreaks...`
     ]);
 
     try {
@@ -2121,16 +2158,16 @@ function WorldThreatGlobe() {
         const data = await res.json();
         setAgentMapLogs(prev => [
           ...prev,
-          `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Advisory completed. Rendering bulletin below:`,
+          `[${new Date().toLocaleTimeString()}] GEMINI_AGENT: Advisory completed. Rendering bulletin below:`,
           `--------------------------------------------------------------------------------`,
           data.report,
           `--------------------------------------------------------------------------------`
         ]);
       } else {
-        setAgentMapLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Error contacting Secure Node.`]);
+        setAgentMapLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] GEMINI_AGENT: Error contacting Secure Node.`]);
       }
     } catch (err) {
-      setAgentMapLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Connection timeout.`]);
+      setAgentMapLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] GEMINI_AGENT: Connection timeout.`]);
     } finally {
       setIsAgentMapLoading(false);
     }
@@ -2209,7 +2246,7 @@ function WorldThreatGlobe() {
       
       setAgentMapLogs(prev => [
         ...prev,
-        `[${new Date().toLocaleTimeString()}] CLAUDE_AGENT: Outbreak alert - ${template.actor} triggered "${template.type}" targetting ${template.target}.`
+        `[${new Date().toLocaleTimeString()}] GEMINI_AGENT: Outbreak alert - ${template.actor} triggered "${template.type}" targetting ${template.target}.`
       ]);
     };
 

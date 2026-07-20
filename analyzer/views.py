@@ -5,6 +5,8 @@ import re
 import pefile
 import yara
 import anthropic
+from google import genai
+from google.genai import types
 import random
 import io
 import requests
@@ -425,30 +427,34 @@ def process_malware_file_async(log_id, file_data, vt_key, anthropic_key):
         time.sleep(0.3)
         
         ai_report_text = ""
-        api_key = anthropic_key or os.getenv("ANTHROPIC_API_KEY", "")
+        api_key = anthropic_key or os.getenv("GEMINI_API_KEY", os.getenv("ANTHROPIC_API_KEY", ""))
         if api_key:
             try:
-                client = anthropic.Anthropic(api_key=api_key)
+                client = genai.Client(api_key=api_key)
                 prompt = f"Perform threat assessment for file: {log.file_name}\nEntropy: {log.entropy}\nYARA: {log.yara_matches}\nIOCs: {log.extracted_iocs}\n\nFormat output precisely with Markdown headers: ### 🛡️ Executive Summary & Threat Classification, ### 🥷 MITRE ATT&CK Mapping Matrix, ### ⚡ Actionable Incident Response Playbook"
-                message = client.messages.create(
-                    model="claude-3-5-sonnet-20241022",
-                    max_tokens=1500,
-                    temperature=0.1,
-                    system="You are the BlueIntel Autonomous SecOps AI Copilot, an elite tier-3 malware analysis agent.",
-                    messages=[{"role": "user", "content": prompt}]
+                system_prompt = "You are the BlueIntel Autonomous SecOps AI Copilot, an elite tier-3 malware analysis agent."
+                
+                response = client.models.generate_content(
+                    model='gemini-2.0-flash',
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        max_output_tokens=1500,
+                        temperature=0.1
+                    )
                 )
-                ai_report_text = message.content[0].text
+                ai_report_text = response.text
             except Exception as e:
                 error_msg = str(e)
-                if "credit balance" in error_msg.lower() or "billing" in error_msg.lower():
+                if "quota" in error_msg.lower() or "billing" in error_msg.lower() or "limit" in error_msg.lower() or "credit" in error_msg.lower():
                     ai_report_text = (
-                        "⚠️ Anthropic Claude API Billing Issue: The configured API key has an insufficient credit balance. "
-                        "Please fund your Anthropic Console account or update your API Key under the Settings console tab to resume operations."
+                        "⚠️ Google Gemini API Quota/Billing Issue: The configured API key has an insufficient credit balance or exceeded quota limit. "
+                        "Please check your Google AI Studio billing status or update your API Key under the Settings console tab to resume operations."
                     )
                 else:
                     ai_report_text = f"AI Generator connection issue: {error_msg}"
         else:
-            ai_report_text = "Anthropic Claude API Key not configured. AI Playbook generation bypassed."
+            ai_report_text = "Google Gemini API Key not configured. AI Playbook generation bypassed."
             
         log.ai_generated_report = ai_report_text
         log.save()
@@ -916,12 +922,12 @@ class AIThreatReportView(APIView):
         except Exception:
             pass
 
-        api_key = claude_key_plain or os.getenv("ANTHROPIC_API_KEY", "")
+        api_key = claude_key_plain or os.getenv("GEMINI_API_KEY", os.getenv("ANTHROPIC_API_KEY", ""))
         if not api_key:
-            return Response({"error": "Anthropic Claude API Key is missing. Configure it in Settings to enable AI analysis."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": "Google Gemini API Key is missing. Configure it in Settings to enable AI analysis."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         try:
-            client = anthropic.Anthropic(api_key=api_key)
+            client = genai.Client(api_key=api_key)
             system_prompt = "You are the BlueIntel Autonomous SecOps AI Copilot, an elite tier-3 malware analysis agent."
 
             if user_query:
@@ -929,15 +935,16 @@ class AIThreatReportView(APIView):
             else:
                 prompt = f"Perform threat assessment for file: {analysis_data.get('file_name')}\nEntropy: {analysis_data.get('entropy')}\nYARA: {analysis_data.get('yara_matches')}\nIOCs: {analysis_data.get('iocs')}\n\nFormat output precisely with Markdown headers: ### 🛡️ Executive Summary & Threat Classification, ### 🥷 MITRE ATT&CK Mapping Matrix, ### ⚡ Actionable Incident Response Playbook"
 
-            message = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=1500,
-                temperature=0.1,
-                system=system_prompt,
-                messages=[{"role": "user", "content": prompt}]
+            response = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=1500,
+                    temperature=0.1
+                )
             )
-
-            ai_response_text = message.content[0].text
+            ai_response_text = response.text
 
             # Update cache if it is an initial report calculation
             if not user_query and "sha256" in analysis_data:
@@ -947,10 +954,10 @@ class AIThreatReportView(APIView):
 
         except Exception as e:
             error_msg = str(e)
-            if "credit balance" in error_msg.lower() or "billing" in error_msg.lower():
+            if "quota" in error_msg.lower() or "billing" in error_msg.lower() or "limit" in error_msg.lower() or "credit" in error_msg.lower():
                 friendly_err = (
-                    "⚠️ Anthropic Claude API Billing Issue: The configured API key has an insufficient credit balance. "
-                    "Please fund your Anthropic Console account or update your API Key under the Settings console tab to resume operations."
+                    "⚠️ Google Gemini API Quota/Billing Issue: The configured API key has an insufficient credit balance or exceeded quota limit. "
+                    "Please check your Google AI Studio billing status or update your API Key under the Settings console tab to resume operations."
                 )
                 return Response({"error": friendly_err}, status=status.HTTP_400_BAD_REQUEST)
             return Response({"error": f"AI Engine Connection Pipeline Error: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1013,9 +1020,9 @@ class AICopilotChatView(APIView):
         except Exception:
             pass
 
-        api_key = claude_key_plain or os.getenv("ANTHROPIC_API_KEY", "")
+        api_key = claude_key_plain or os.getenv("GEMINI_API_KEY", os.getenv("ANTHROPIC_API_KEY", ""))
         if not api_key:
-            return Response({"error": "Anthropic Claude API Key is missing. Configure it in Settings to enable AI Copilot."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": "Google Gemini API Key is missing. Configure it in Settings to enable AI Copilot."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         start_time = time.time()
 
@@ -1071,8 +1078,8 @@ class AICopilotChatView(APIView):
         except Exception:
             pass
 
-        # 4. Construct Anthropic Chat Prompt
-        model_name = "claude-3-5-sonnet-20241022"
+        # 4. Construct Gemini Chat Prompt
+        model_name = "gemini-2.0-flash"
         system_prompt = (
             "You are the BlueIntel AI Security Assistant, an elite Level 3 Security Operations Center (SOC) Analyst and Malware Analyst.\n"
             "You work alongside security administrators, developers, recruiters, and beginners.\n"
@@ -1094,15 +1101,17 @@ class AICopilotChatView(APIView):
 """
 
         try:
-            client = anthropic.Anthropic(api_key=api_key)
-            message = client.messages.create(
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
                 model=model_name,
-                max_tokens=1500,
-                temperature=0.15,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_content}]
+                contents=user_content,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=1500,
+                    temperature=0.15
+                )
             )
-            ai_response_text = message.content[0].text
+            ai_response_text = response.text
             response_time = time.time() - start_time
 
             # Save chat log in MongoDB/secondary pool
@@ -1151,10 +1160,10 @@ class AICopilotChatView(APIView):
 
         except Exception as e:
             error_msg = str(e)
-            if "credit balance" in error_msg.lower() or "billing" in error_msg.lower():
+            if "quota" in error_msg.lower() or "billing" in error_msg.lower() or "limit" in error_msg.lower() or "credit" in error_msg.lower():
                 friendly_err = (
-                    "⚠️ Anthropic Claude API Billing Issue: The configured API key has an insufficient credit balance. "
-                    "Please fund your Anthropic Console account or update your API Key under the Settings console tab to resume operations."
+                    "⚠️ Google Gemini API Quota/Billing Issue: The configured API key has an insufficient credit balance or exceeded quota limit. "
+                    "Please check your Google AI Studio billing status or update your API Key under the Settings console tab to resume operations."
                 )
                 return Response({"error": friendly_err}, status=status.HTTP_400_BAD_REQUEST)
             return Response({"error": f"AI Security Assistant Error: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -153,7 +153,7 @@ export default function Settings() {
             {/* Claude API Key Input */}
             <div className="space-y-2">
               <div className="flex justify-between items-center text-xs">
-                <label className="font-mono uppercase text-gray-400 font-bold flex items-center gap-1"><Key size={14}/> Anthropic Claude API Key</label>
+                <label className="font-mono uppercase text-gray-400 font-bold flex items-center gap-1"><Key size={14}/> Google Gemini API Key</label>
                 <span className={`text-[9px] font-mono px-2 py-0.5 rounded ${claudeConfigured ? 'bg-emerald-500/10 text-emerald-400' : 'bg-yellow-500/10 text-yellow-400'}`}>
                   {claudeConfigured ? '🟢 Active' : '🟡 Not Connected'}
                 </span>
@@ -164,7 +164,7 @@ export default function Settings() {
                   value={claudeKey}
                   onChange={(e) => setClaudeKey(e.target.value)}
                   className="w-full bg-[#04060d]/90 border border-white/10 focus:border-[#25a5ff] rounded-xl px-4 py-3.5 text-xs text-white font-mono outline-none transition-all shadow-inner"
-                  placeholder={claudeConfigured ? "Type to overwrite existing Claude key..." : "Enter Anthropic API Credentials..."}
+                  placeholder={claudeConfigured ? "Type to overwrite existing Gemini key..." : "Enter Google Gemini API Credentials..."}
                 />
                 <button 
                   type="button"
